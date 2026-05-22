@@ -1,0 +1,10 @@
+---
+description: Keep forms-core headless and UI-free.
+alwaysApply: true
+---
+
+# Headless Package Boundary
+
+Do not import React, Chakra, React Router, `mobx-react-lite`, or UI packages in
+package source. `forms-core` must be testable in Node and usable outside
+component lifecycle.

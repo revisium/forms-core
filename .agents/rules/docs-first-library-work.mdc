@@ -1,0 +1,14 @@
+---
+description: Keep forms-core implementation docs-first.
+alwaysApply: true
+---
+
+# Docs-First Library Work
+
+`docs/` is the implementation source of truth while `forms-core` is being
+developed. Before changing public API, architecture, validation behavior,
+server-error lifecycle, array behavior, patch behavior, release workflow, or
+review rules, update the matching canonical doc first.
+
+If code and docs disagree, treat the PR as blocked until the same change either
+updates the docs or brings the code back to the documented contract.

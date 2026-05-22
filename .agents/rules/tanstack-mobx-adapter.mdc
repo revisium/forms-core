@@ -1,0 +1,14 @@
+---
+description: Enforce TanStack form-core engine and MobX adapter boundary.
+alwaysApply: true
+---
+
+# TanStack MobX Adapter
+
+Use `@tanstack/form-core` as the engine. Do not fork it, monkey-patch it, or
+replace it with a custom form engine. The adapter should bridge
+`store.get()` plus `store.subscribe()` into MobX observables and expose a clean
+MobX-reactive public API.
+
+Do not make consumers subscribe to TanStack stores. Do not expose raw TanStack
+state as the primary API.

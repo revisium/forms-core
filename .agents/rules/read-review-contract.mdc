@@ -1,0 +1,11 @@
+---
+description: Use the forms-core review contract before review or implementation.
+alwaysApply: true
+---
+
+# Read Review Contract
+
+Start review and implementation work from `REVIEW.md`, then follow
+`docs/architecture.md`, `docs/steps.md`, `docs/pr-plan.md`,
+`docs/quality-gates.md`, `docs/readme-guidelines.md`, and
+`docs/review/forms-core-checklist.md`.
