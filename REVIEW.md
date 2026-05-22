@@ -59,6 +59,9 @@ Block a PR when any of these are true:
 - Tests only check method existence instead of real behavior.
 - Required validation commands are skipped without a concrete risk note.
 - Failed or pending required CI, Sonar, or quality-gate checks are ignored.
+- Sonar is treated as done after a passing Quality Gate without inspecting the
+  unresolved issue list. Sonar issue tolerance is `0`: every valid issue must be
+  fixed.
 - README examples drift from tested public behavior.
 
 ## Expected Author Self-Review

@@ -14,7 +14,8 @@ const form = createForm({
   fields: {
     email: field<string>({
       validators: {
-        onChange: ({ value }) => (value.includes('@') ? undefined : 'Invalid email'),
+        onChange: ({ value }) =>
+          value.includes('@') ? undefined : 'Invalid email',
       },
     }),
   },
@@ -297,17 +298,17 @@ representation if the implementation chooses that route.
 
 Common array operation mapping:
 
-| Operation                    | Patch type                         |
-| ---------------------------- | ---------------------------------- |
-| `push(value)`                | `insert`                           |
-| `insert(index, value)`       | `insert`                           |
-| `removeById(id)`             | `remove`                           |
-| `removeAt(index)`            | `remove`                           |
-| `move(fromIndex, toIndex)`   | `move`                             |
+| Operation                     | Patch type                        |
+| ----------------------------- | --------------------------------- |
+| `push(value)`                 | `insert`                          |
+| `insert(index, value)`        | `insert`                          |
+| `removeById(id)`              | `remove`                          |
+| `removeAt(index)`             | `remove`                          |
+| `move(fromIndex, toIndex)`    | `move`                            |
 | `swap(leftIndex, rightIndex)` | two `move` patches or array `set` |
-| `clear()`                    | `clear`                            |
-| whole-array replacement      | array `set`                        |
-| duplicate or missing ids     | array `set` plus validation error  |
+| `clear()`                     | `clear`                           |
+| whole-array replacement       | array `set`                       |
+| duplicate or missing ids      | array `set` plus validation error |
 
 Patches are for autosave, not for replacing TanStack state.
 

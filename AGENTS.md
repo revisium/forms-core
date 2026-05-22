@@ -73,6 +73,11 @@ npm run verify
 The planned `verify` script should run TypeScript, lint, unit tests, build, and
 Markdown/skill checks.
 
+Sonar has zero-tolerance semantics in this repo. A passing Quality Gate is not
+enough by itself: always inspect unresolved Sonar issues for the PR or branch.
+Fix every valid issue. If an issue is a false positive, document the evidence
+and use the narrowest allowed suppression only when the repo permits it.
+
 ## Handoff
 
 Start from [docs/handoff/README.md](./docs/handoff/README.md). It links the

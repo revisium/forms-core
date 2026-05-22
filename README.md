@@ -9,9 +9,10 @@ lifecycle, and consumers should observe public getters with MobX `computed`,
 
 ## Current Status
 
-This repository is in the planning/bootstrap phase. The first change establishes
-the agent contract, review contract, architecture notes, implementation steps,
-and release plan before adding package code.
+This repository is in the package-scaffold phase. The agent contract, review
+contract, architecture notes, implementation steps, release plan, local
+toolchain, CI, and Sonar configuration are being established before runtime form
+behavior is added.
 
 ## Start Here
 
@@ -35,6 +36,36 @@ and release plan before adding package code.
 - Keep TanStack store and error-map details private.
 - Support scalar controls, nested paths, stable-id arrays, validation, server
   errors, patches for autosave, reset, submit, and disposal.
+
+## Development
+
+Use Node.js 20.16 or newer. The CI target currently uses Node.js 24.11.1.
+
+```bash
+npm ci
+npm run verify
+```
+
+Useful local commands:
+
+- `npm run tsc` - TypeScript typecheck.
+- `npm run lint:ci` - ESLint with zero warnings.
+- `npm run test:cov` - Jest coverage output for Sonar.
+- `npm run sonar:local` - run Sonar locally from existing coverage.
+- `npm run sonar:issues:local` - fail on unresolved Sonar issues.
+- `npm run ci:local:sonar` - run local verify and then Sonar quality gate.
+- `npm run build` - package build and declaration output.
+- `npm run markdown:lint` - Markdown and agent-rule lint.
+- `npm run skills:lint` - repo-local agent skill structure lint.
+
+For local Sonar, either export `SONAR_TOKEN` in the shell or create an
+untracked `.env.sonar` from `.env.sonar.example`. Do not commit real Sonar
+tokens. Prefer running local Sonar after the branch has a GitHub PR: the script
+auto-detects the PR and runs PR analysis. Before a PR exists, Sonar falls back
+to branch analysis, which may be blocked by the organization plan.
+
+Do not treat Sonar `PASSED` as complete by itself. Inspect unresolved issues and
+fix every valid issue; this repo uses zero tolerance for Sonar issues.
 
 ## Bootstrap Pattern
 

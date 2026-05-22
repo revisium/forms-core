@@ -16,6 +16,9 @@ For a library, that means the initial PR creates:
 - the step tracker;
 - the PR sequence;
 - repo-local skills and rules;
+- local quality gates, including ESLint, coverage, CI Sonar, and local Sonar;
+- a zero-tolerance Sonar issue-inspection rule, because a passing Quality Gate
+  can still leave unresolved issues;
 - release notes for npm/package publication;
 - a handoff entry point.
 
@@ -76,3 +79,9 @@ When copying this pattern:
 6. Keep the final cleanup rule for temporary step trackers.
 7. Keep symlink layout compatible with Claude Code:
    `CLAUDE.md -> AGENTS.md` and `.claude/skills -> ../.agents/skills`.
+8. Add local Sonar scripts early. They must read `SONAR_TOKEN` only from the
+   environment or an untracked `.env.sonar`, and should prefer PR analysis over
+   branch analysis when the SonarCloud organization blocks non-main branch
+   gates.
+9. Require Sonar issue inspection in addition to Quality Gate status. The
+   unresolved valid issue count must be `0`.
