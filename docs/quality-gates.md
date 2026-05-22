@@ -66,8 +66,11 @@ from `revisium/revisium-actions`, not bespoke repo-local release logic.
 ## Sonar
 
 CI runs Sonar through `.github/workflows/ci.yml` when `SONAR_TOKEN` is
-configured. Local Sonar uses the same project config and waits for the quality
-gate:
+configured. Push builds on `master` and release branches upload Sonar analysis
+without blocking on the branch-level total issue count. Pull requests enforce
+both the Quality Gate and unresolved issue inspection.
+
+Local Sonar uses the same project config and waits for the PR quality gate:
 
 ```bash
 cp .env.sonar.example .env.sonar
@@ -95,18 +98,23 @@ For manual PR analysis, set:
 SONAR_PR_KEY=123 SONAR_PR_BRANCH=my-branch SONAR_PR_BASE=master npm run sonar:local
 ```
 
-Quality Gate `PASSED` is necessary but not sufficient. Every PR must inspect
-the unresolved Sonar issue list:
+For PRs, Quality Gate `PASSED` is necessary but not sufficient. Every PR must
+inspect the unresolved Sonar issue list:
 
 ```bash
 npm run sonar:issues:local
 ```
 
-The accepted unresolved issue count is `0`. Fix every valid issue, including
+The accepted PR unresolved issue count is `0`. Fix every valid issue, including
 minor maintainability issues. If an issue is a false positive, document the
 rule, file, line, message, and evidence, then use the narrowest accepted
-suppression only when this repository permits it. Do not report Sonar as done
+suppression only when this repository permits it. Do not report PR Sonar as done
 unless both the Quality Gate and unresolved issue inspection pass.
+
+Do not apply PR zero-issue enforcement to `master` or release branch push
+builds. Branch builds should publish analysis so the project history is visible,
+but they must not fail only because existing branch-level issue totals are
+non-zero.
 
 When Sonar is configured, resolve the project key in this order:
 

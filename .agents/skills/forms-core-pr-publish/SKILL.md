@@ -75,7 +75,8 @@ npm run sonar:issues:local
 ```
 
 Do not treat a passing Sonar Quality Gate as sufficient. The unresolved valid
-Sonar issue count must be `0`.
+PR Sonar issue count must be `0`. This is a PR gate; branch pushes should remain
+scan-only for Sonar.
 
 For the docs-only bootstrap before package scripts exist:
 

@@ -67,6 +67,10 @@ configured. Sonar `PASSED` is not enough: inspect unresolved Sonar issues with
 remaining valid issues. Do not call a branch ready while required checks are
 failed, pending, or hiding unresolved valid Sonar issues.
 
+Apply the zero-issue rule to PRs only. Push builds on `master` and release
+branches should upload Sonar analysis but must not fail only because the branch
+has non-zero historical issue totals.
+
 ## Output Format
 
 ```text

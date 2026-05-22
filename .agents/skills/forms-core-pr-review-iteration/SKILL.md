@@ -46,8 +46,8 @@ architecture or broadening the PR scope.
      editing;
    - Sonar/SonarQube/SonarCloud failure: inspect the linked quality gate or
      issue list and identify rule, file, line, and message before editing;
-   - Sonar/SonarQube/SonarCloud pass: still inspect unresolved issues; accepted
-     valid issue count is `0`;
+   - Sonar/SonarQube/SonarCloud PR pass: still inspect unresolved issues;
+     accepted valid PR issue count is `0`;
    - pending required check: wait or report that the PR is not ready.
 7. Fix valid issues only.
 8. Run required validation.
