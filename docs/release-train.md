@@ -2,6 +2,11 @@
 
 This package is intended for npm publication as `@revisium/forms-core`.
 
+Release automation must use the shared workflows from
+`revisium/revisium-actions`, following the same pattern as `revisium-admin`.
+Do not invent repo-local release scripts when a shared action already owns the
+workflow.
+
 ## Release Principles
 
 - Publish only after explicit user approval.
@@ -36,6 +41,46 @@ After `1.0.0`, use normal SemVer:
 - [ ] package exports are reviewed.
 - [ ] no React/UI dependency is present.
 - [ ] `@tanstack/form-core` and `mobx` dependency ranges are intentional.
+- [ ] GitHub workflows delegate release and npm publish behavior to
+  `revisium/revisium-actions`.
+
+## Required GitHub Workflows
+
+Add these workflows when the package scaffold and validation scripts exist:
+
+- `.github/workflows/ci.yml` - local package checks for PRs and `master`.
+- `.github/workflows/release-train.yml` - delegates release version transitions
+  to `revisium/revisium-actions/.github/workflows/release-train.yml`, pinned to
+  an approved commit or tag.
+- `.github/workflows/npm-publish.yml` - delegates tag publishing to
+  `revisium/revisium-actions/.github/workflows/npm-publish.yml`, pinned to an
+  approved commit or tag.
+
+Use the current `revisium-admin` workflows as the reference shape:
+
+```yaml
+jobs:
+  release-train:
+    uses: revisium/revisium-actions/.github/workflows/release-train.yml@<approved-ref>
+    with:
+      base_branch: master
+      install_command: npm ci
+      validate_command: npm run verify
+```
+
+```yaml
+jobs:
+  publish:
+    uses: revisium/revisium-actions/.github/workflows/npm-publish.yml@<approved-ref>
+    with:
+      install_command: npm ci
+      npm_access: public
+      publish_auth: token
+```
+
+Do not use a floating branch such as `@master` for shared release workflows.
+Pin to the approved `revisium-actions` ref used by the current Revisium release
+train, then update intentionally in a separate maintenance PR when needed.
 
 ## Publish Flow
 
@@ -46,7 +91,7 @@ After `1.0.0`, use normal SemVer:
 5. Push and open a PR when requested.
 6. Wait for CI.
 7. Merge after approval.
-8. Publish through the approved npm release workflow.
+8. Publish through the approved `revisium-actions` npm workflow.
 9. Verify the package on npm.
 
 ## Consumer Smoke Test

@@ -11,11 +11,11 @@ Before the package scaffold exists:
 git status --short --branch
 git diff --check
 rg -n "[ \t]+$" README.md AGENTS.md REVIEW.md docs .agents
-node ../demo/demo-rpg-frontend/scripts/lint-skills.mjs
+node scripts/lint-skills.mjs
 ```
 
-The skill lint command reuses the demo script until `forms-core` has its own
-package scripts.
+The skill lint script is repo-local so this repository can be validated without
+the demo workspace.
 
 ## Planned Local Scripts
 
@@ -55,6 +55,9 @@ Expected required checks:
 - unit coverage report;
 - package build;
 - Sonar or quality gate when configured.
+
+Release and npm publish checks should be implemented through reusable workflows
+from `revisium/revisium-actions`, not bespoke repo-local release logic.
 
 ## Sonar
 

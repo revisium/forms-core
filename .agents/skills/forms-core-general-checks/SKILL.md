@@ -46,7 +46,7 @@ For docs-only bootstrap changes:
 ```bash
 git diff --check
 rg -n "[ \t]+$" README.md AGENTS.md REVIEW.md docs .agents
-node ../demo/demo-rpg-frontend/scripts/lint-skills.mjs
+node scripts/lint-skills.mjs
 ```
 
 After package scaffold exists:

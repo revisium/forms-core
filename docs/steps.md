@@ -24,6 +24,7 @@ history. Durable facts must live in `README.md`, `docs/architecture.md`,
 - [x] Create architecture, review, handoff, PR plan, release train, and
   bootstrap-pattern docs.
 - [x] Create README guidelines and quality-gate docs.
+- [x] Add repo-local `scripts/lint-skills.mjs`.
 - [x] Validate docs-only change with `git diff --check`.
 
 Exit criteria:
@@ -42,9 +43,10 @@ Exit criteria:
 - [ ] Add package entrypoint with placeholder exports only if needed.
 - [ ] Add `npm run verify` that runs typecheck, lint, test, build, and docs or
   skill validation.
-- [ ] Add local skill lint copied or adapted from the demo repo.
+- [ ] Wire existing local skill lint into `npm run skills:lint`.
 - [ ] Add Markdown lint and Prettier check for docs.
 - [ ] Add coverage output suitable for Sonar.
+- [ ] Add initial CI workflow once `npm run verify` exists.
 - [ ] Add package publish metadata without publishing.
 
 Allowed dependencies:
@@ -153,6 +155,7 @@ Exit criteria:
 - [ ] Confirm public exports.
 - [ ] Run full verify.
 - [ ] Run `npm pack` and inspect package contents.
+- [ ] Add release train and npm publish workflows using `revisium-actions`.
 - [ ] Inspect CI and Sonar/quality gate status when configured.
 - [ ] Remove or replace this temporary `docs/steps.md`.
 

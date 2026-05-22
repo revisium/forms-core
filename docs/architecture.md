@@ -214,11 +214,32 @@ Server errors are explicit external errors:
 - they survive validation cycles;
 - they are cleared for a field when that field value changes;
 - nested paths clear only their own server error;
-- array item server errors are path-based and may need reindexing after array
-  operations;
 - all server errors clear on `reset()`;
 - submitting does not clear server errors unless the implementation explicitly
   receives new server errors or values change.
+
+Array server-error rules:
+
+- array fields with `arrayField({ getItemId })` should preserve server errors by
+  stable item id when the error path points inside an item;
+- `push()` creates a new item with no server errors;
+- `insert()` creates a new item with no server errors and keeps existing item
+  errors attached to their original ids;
+- `removeById()` and `removeAt()` clear errors for the removed item and remap
+  remaining item errors to their new index paths;
+- `move()` and `swap()` preserve errors by stable item id and remap them to each
+  item's new index path;
+- `clear()` removes all errors under that array path.
+
+Example: if `members[1].name` has a server error for member id `b`, removing
+`members[0]` remaps the error to `members[0].name` because member `b` moved to
+index `0`. The error is cleared only if the removed item was the item that owned
+the error.
+
+The first implementation requires `getItemId` for public arrays, so array
+server errors should follow item identity rather than raw index identity. If a
+future low-level path API accepts arrays without stable ids, its errors must be
+documented as path-based and reindexed with raw array indexes.
 
 This behavior must be tested.
 
@@ -256,11 +277,37 @@ Patch rules:
 
 - scalar changes emit `set`;
 - nested object changes include full dot/bracket path;
-- array append emits `insert`;
-- array remove emits `remove` or `clear`;
-- array reorder should emit `move` when stable ids make the move detectable;
-- fallback may emit minimal `set` patches when an array diff cannot be safely
-  represented, but tests must cover the chosen behavior.
+- `push()` emits `insert`;
+- `insert(index, value)` emits `insert`;
+- `removeById(id)` and `removeAt(index)` emit `remove`;
+- `clear()` emits `clear`;
+- `move(fromIndex, toIndex)` emits `move`;
+- `swap(leftIndex, rightIndex)` emits two `move` patches or one `set` patch for
+  the array path; the chosen representation must be stable and tested before
+  release;
+- direct scalar edits inside array items emit `set` at the item field path after
+  resolving the current index from the stable item id.
+
+Fallback `set` patches are allowed only for ambiguous bulk changes that cannot
+be mapped to one public array command, such as replacing the whole array value,
+multiple simultaneous inserts/removes from an external reset, or concurrent
+changes where stable ids are duplicated or missing. Public array commands should
+not fall back to vague `set` patches except for the documented `swap()`
+representation if the implementation chooses that route.
+
+Common array operation mapping:
+
+| Operation                    | Patch type                         |
+| ---------------------------- | ---------------------------------- |
+| `push(value)`                | `insert`                           |
+| `insert(index, value)`       | `insert`                           |
+| `removeById(id)`             | `remove`                           |
+| `removeAt(index)`            | `remove`                           |
+| `move(fromIndex, toIndex)`   | `move`                             |
+| `swap(leftIndex, rightIndex)` | two `move` patches or array `set` |
+| `clear()`                    | `clear`                            |
+| whole-array replacement      | array `set`                        |
+| duplicate or missing ids     | array `set` plus validation error  |
 
 Patches are for autosave, not for replacing TanStack state.
 

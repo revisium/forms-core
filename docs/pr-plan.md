@@ -34,6 +34,7 @@ Scope:
 - validation scripts.
 - Markdown, skill, coverage, and package-check scripts described in
   [quality-gates.md](./quality-gates.md).
+- initial CI workflow if validation scripts are ready.
 
 Validation:
 
@@ -42,6 +43,9 @@ npm run verify
 ```
 
 No form behavior beyond compile-ready placeholders.
+
+The repo already contains `scripts/lint-skills.mjs` from PR 1. PR 2 should wire
+that script into `npm run skills:lint` instead of referencing another repo.
 
 ## PR 3 - MobX Selector Bridge
 
@@ -130,6 +134,7 @@ Scope:
 - limitations;
 - package export review;
 - npm package content audit;
+- release train and npm publish workflows delegated to `revisium-actions`;
 - CI and Sonar/quality gate inspection when configured;
 - cleanup of temporary tracker docs.
 
