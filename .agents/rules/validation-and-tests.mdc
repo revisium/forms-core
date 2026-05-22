@@ -1,0 +1,11 @@
+---
+description: Require behavior-focused tests for forms-core.
+alwaysApply: true
+---
+
+# Validation And Tests
+
+Tests must exercise real behavior: MobX reactions, validation changes, reset
+state, server errors, async debounce, linked validation, nested paths, stable
+array ids, patch emission, and disposal. Do not replace behavior tests with
+method-existence checks.
