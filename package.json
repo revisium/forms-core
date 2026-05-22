@@ -1,6 +1,6 @@
 {
   "name": "@revisium/forms-core",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.0",
   "description": "Headless TypeScript form library over TanStack Form Core with a MobX-native public API",
   "keywords": [
     "forms",
