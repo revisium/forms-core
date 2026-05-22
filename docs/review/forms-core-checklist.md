@@ -68,7 +68,7 @@ sections that match their scope.
 - [ ] `git diff --check` passes.
 - [ ] Markdown and skill checks pass after scaffold exists.
 - [ ] Sonar or quality-gate failures are inspected from the actual check when
-  configured.
+      configured.
 - [ ] Package contents are checked before release.
 
 ## README

@@ -3,9 +3,9 @@
 This document defines local verification, CI expectations, Sonar handling, and
 package checks for `forms-core`.
 
-## Current Docs-Only Gate
+## Docs And Agent Gate
 
-Before the package scaffold exists:
+For documentation-only changes or before installing dependencies:
 
 ```bash
 git status --short --branch
@@ -15,34 +15,37 @@ node scripts/lint-skills.mjs
 ```
 
 The skill lint script is repo-local so this repository can be validated without
-the demo workspace.
+the demo workspace. Once dependencies are installed, `npm run verify` is the
+primary gate.
 
-## Planned Local Scripts
+## Local Scripts
 
-PR 2 should add scripts equivalent to:
+The package scaffold provides these scripts:
 
 ```json
 {
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && npm run build:dts",
+    "build:dts": "tsc --emitDeclarationOnly --outDir dist --declaration --declarationMap",
     "dev": "tsdown --watch",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --silent",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --silent --passWithNoTests",
+    "sonar:local": "bash scripts/sonar-local.sh",
+    "ci:local:sonar": "bash scripts/ci-local-sonar.sh",
     "lint:ci": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,md,json,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,md,json,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{ts,js,mjs,md,json,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,mjs,md,json,yml,yaml}\"",
     "markdown:lint": "markdownlint-cli2",
     "skills:lint": "node scripts/lint-skills.mjs",
     "tsc": "tsc --noEmit",
-    "verify": "npm run markdown:lint && npm run skills:lint && npm run tsc && npm run lint:ci && npm test && npm run build"
+    "verify": "npm run markdown:lint && npm run skills:lint && npm run format:check && npm run tsc && npm run lint:ci && npm run test:cov && npm run build"
   }
 }
 ```
 
-The final script names can follow the chosen toolchain, but `npm run verify`
-must be the single local PR gate.
+`npm run verify` is the single local PR gate.
 
 ## Required PR Checks
 
@@ -54,12 +57,41 @@ Expected required checks:
 - `npm run verify`;
 - unit coverage report;
 - package build;
-- Sonar or quality gate when configured.
+- Sonar quality gate when `SONAR_TOKEN` is configured.
 
 Release and npm publish checks should be implemented through reusable workflows
 from `revisium/revisium-actions`, not bespoke repo-local release logic.
 
 ## Sonar
+
+CI runs Sonar through `.github/workflows/ci.yml` when `SONAR_TOKEN` is
+configured. Local Sonar uses the same project config and waits for the quality
+gate:
+
+```bash
+cp .env.sonar.example .env.sonar
+# Fill SONAR_TOKEN locally, or export SONAR_TOKEN from your shell.
+npm run ci:local:sonar
+```
+
+`npm run ci:local:sonar` removes stale coverage, runs `npm run verify`, and then
+runs `npm run sonar:local`. `npm run sonar:local` requires `coverage/lcov.info`
+and fails fast if coverage is missing. Keep `.env.sonar` untracked.
+
+Run local Sonar after the branch has a GitHub PR whenever possible. The script
+uses `gh pr view` to send PR analysis parameters:
+
+- `sonar.pullrequest.key`
+- `sonar.pullrequest.branch`
+- `sonar.pullrequest.base`
+
+If there is no PR, the script falls back to branch analysis. SonarCloud may
+reject non-main branch quality-gate lookup depending on the organization plan.
+For manual PR analysis, set:
+
+```bash
+SONAR_PR_KEY=123 SONAR_PR_BRANCH=my-branch SONAR_PR_BASE=master npm run sonar:local
+```
 
 When Sonar is configured, resolve the project key in this order:
 

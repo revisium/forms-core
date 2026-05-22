@@ -22,7 +22,7 @@ history. Durable facts must live in `README.md`, `docs/architecture.md`,
 - [x] Create `.claude/skills -> ../.agents/skills` symlink.
 - [x] Create `REVIEW.md`.
 - [x] Create architecture, review, handoff, PR plan, release train, and
-  bootstrap-pattern docs.
+      bootstrap-pattern docs.
 - [x] Create README guidelines and quality-gate docs.
 - [x] Add repo-local `scripts/lint-skills.mjs`.
 - [x] Validate docs-only change with `git diff --check`.
@@ -35,19 +35,21 @@ Exit criteria:
 
 ## PR 2 - Package Scaffold
 
-- [ ] Add `package.json` for `@revisium/forms-core`.
-- [ ] Add TypeScript config.
-- [ ] Add build config.
-- [ ] Add test runner config.
-- [ ] Add lint and format config.
-- [ ] Add package entrypoint with placeholder exports only if needed.
-- [ ] Add `npm run verify` that runs typecheck, lint, test, build, and docs or
-  skill validation.
-- [ ] Wire existing local skill lint into `npm run skills:lint`.
-- [ ] Add Markdown lint and Prettier check for docs.
-- [ ] Add coverage output suitable for Sonar.
-- [ ] Add initial CI workflow once `npm run verify` exists.
-- [ ] Add package publish metadata without publishing.
+- [x] Add `package.json` for `@revisium/forms-core`.
+- [x] Add TypeScript config.
+- [x] Add build config.
+- [x] Add test runner config.
+- [x] Add lint and format config.
+- [x] Add package entrypoint with placeholder exports only if needed.
+- [x] Add `npm run verify` that runs typecheck, lint, test, build, and docs or
+      skill validation.
+- [x] Wire existing local skill lint into `npm run skills:lint`.
+- [x] Add Markdown lint and Prettier check for docs.
+- [x] Add coverage output suitable for Sonar.
+- [x] Add initial CI workflow once `npm run verify` exists.
+- [x] Add Sonar scan wiring and project configuration.
+- [x] Add local Sonar scripts and bootstrap docs.
+- [x] Add package publish metadata without publishing.
 
 Allowed dependencies:
 
@@ -56,7 +58,7 @@ Allowed dependencies:
 
 Exit criteria:
 
-- `npm run verify` passes;
+- `npm run verify` passes locally and in CI;
 - package can build without implementation shortcuts;
 - no React dependencies.
 
@@ -82,15 +84,15 @@ Exit criteria:
 - [ ] Implement `field`.
 - [ ] Own `FormApi` and mount/dispose lifecycle.
 - [ ] Expose form getters: `isValid`, `isDirty`, `isTouched`, `isSubmitting`,
-  `errors`.
+      `errors`.
 - [ ] Expose form commands: `getRawValue`, `reset`, `submit`, `validate`,
-  `dispose`.
+      `dispose`.
 - [ ] Expose control getters: `value`, `displayValue`, `error`, `visibleError`,
-  `isDirty`, `isTouched`, `isValidating`.
+      `isDirty`, `isTouched`, `isValidating`.
 - [ ] Expose control commands: `setValue`, `blur`, `reset`.
 - [ ] Normalize TanStack error maps.
 - [ ] Add tests for scalar value reactivity, validity reactivity, reset, dirty,
-  touched, and no manual subscribe usage.
+      touched, and no manual subscribe usage.
 
 Exit criteria:
 
@@ -108,7 +110,7 @@ Exit criteria:
 - [ ] Implement `applyServerErrors`.
 - [ ] Clear server errors on relevant value changes and reset.
 - [ ] Add tests for validation, debounce, linked validation, form validation,
-  submit validation, server error visibility, and server error clearing.
+      submit validation, server error visibility, and server error clearing.
 
 Exit criteria:
 
@@ -122,7 +124,7 @@ Exit criteria:
 - [ ] Implement `arrayField`.
 - [ ] Implement array item model with `{ id, index, controls, value }`.
 - [ ] Implement `push`, `insert`, `removeById`, `removeAt`, `move`, `swap`,
-  `clear`.
+      `clear`.
 - [ ] Preserve stable public ids through index changes.
 - [ ] Add tests for nested object path and stable array item ids.
 
@@ -139,7 +141,7 @@ Exit criteria:
 - [ ] Dispose patch listeners.
 - [ ] Harden disposed-object behavior.
 - [ ] Add tests for scalar patches, nested patches, array patches, listener
-  disposal, bridge disposal, and form disposal.
+      disposal, bridge disposal, and form disposal.
 
 Exit criteria:
 

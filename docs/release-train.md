@@ -42,7 +42,7 @@ After `1.0.0`, use normal SemVer:
 - [ ] no React/UI dependency is present.
 - [ ] `@tanstack/form-core` and `mobx` dependency ranges are intentional.
 - [ ] GitHub workflows delegate release and npm publish behavior to
-  `revisium/revisium-actions`.
+      `revisium/revisium-actions`.
 
 ## Required GitHub Workflows
 

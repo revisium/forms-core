@@ -36,10 +36,14 @@ function parseFrontmatter(filePath, rawText) {
     return null;
   }
 
-  const closingIndex = lines.findIndex((line, index) => index > 0 && line === '---');
+  const closingIndex = lines.findIndex(
+    (line, index) => index > 0 && line === '---',
+  );
 
   if (closingIndex === -1) {
-    errors.push(`${relativePath}: missing closing YAML frontmatter delimiter ---`);
+    errors.push(
+      `${relativePath}: missing closing YAML frontmatter delimiter ---`,
+    );
     return null;
   }
 
@@ -54,7 +58,9 @@ function parseFrontmatter(filePath, rawText) {
   }
 
   if (body.length === 0) {
-    errors.push(`${relativePath}: missing Markdown instructions after YAML frontmatter`);
+    errors.push(
+      `${relativePath}: missing Markdown instructions after YAML frontmatter`,
+    );
   }
 
   return { frontmatterLines, relativePath };
@@ -76,15 +82,24 @@ function takeWhile(values, predicate) {
 
 function readTopLevelField(frontmatterLines, fieldName) {
   const fieldPrefix = `${fieldName}:`;
-  const fieldIndex = frontmatterLines.findIndex((line) => line.startsWith(fieldPrefix));
+  const fieldIndex = frontmatterLines.findIndex((line) =>
+    line.startsWith(fieldPrefix),
+  );
 
   if (fieldIndex === -1) {
     return null;
   }
 
-  const rawValue = frontmatterLines[fieldIndex].slice(fieldPrefix.length).trim();
+  const rawValue = frontmatterLines[fieldIndex]
+    .slice(fieldPrefix.length)
+    .trim();
 
-  if (rawValue === '>' || rawValue === '>-' || rawValue === '|' || rawValue === '|-') {
+  if (
+    rawValue === '>' ||
+    rawValue === '>-' ||
+    rawValue === '|' ||
+    rawValue === '|-'
+  ) {
     return takeWhile(
       frontmatterLines.slice(fieldIndex + 1),
       (line) => line.trim() === '' || line.startsWith(' '),
@@ -110,12 +125,16 @@ function lintSkillFile(filePath, rawText) {
     const value = readTopLevelField(frontmatterLines, fieldName);
 
     if (value === null) {
-      errors.push(`${relativePath}: missing required frontmatter field "${fieldName}"`);
+      errors.push(
+        `${relativePath}: missing required frontmatter field "${fieldName}"`,
+      );
       continue;
     }
 
     if (value.length === 0) {
-      errors.push(`${relativePath}: required frontmatter field "${fieldName}" is empty`);
+      errors.push(
+        `${relativePath}: required frontmatter field "${fieldName}" is empty`,
+      );
     }
   }
 
@@ -134,7 +153,12 @@ let skillFiles = [];
 try {
   skillFiles = await findSkillFiles(SKILLS_DIR);
 } catch (error) {
-  if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'code' in error &&
+    error.code === 'ENOENT'
+  ) {
     console.error(
       `Skill lint failed: missing skills directory "${path.relative(process.cwd(), SKILLS_DIR)}".`,
     );
