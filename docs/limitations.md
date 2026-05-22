@@ -22,8 +22,8 @@ implementation PR confirms or changes a limitation.
   be represented safely.
 - `displayValue` initially equals `value` unless a documented formatter is
   introduced.
-- Disposed object behavior must be finalized: either documented no-op or
-  documented error.
+- Disposed command methods are no-op. Getters expose the last observed wrapper
+  values or raw form values after disposal.
 
 ## Why Not @tanstack/react-form
 

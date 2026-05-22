@@ -12,6 +12,8 @@ export type {
   FormArrays,
   FormControl,
   FormControls,
+  FormPatch,
+  FormPatchListener,
   FormAsyncValidator,
   FormAsyncValidatorContext,
   FormValidationResult,

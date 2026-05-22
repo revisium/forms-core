@@ -27,6 +27,7 @@ import {
 import {
   createMobxSelectorBridge,
   type MobxSelectorBridge,
+  type StoreSubscription,
   type SubscribableStore,
 } from './internal/mobx-selector-bridge.js';
 
@@ -182,6 +183,38 @@ export type FormArray<TItem> = {
   clear(): void;
 };
 
+export type FormPatch =
+  | {
+      readonly type: 'set';
+      readonly path: string;
+      readonly value: unknown;
+      readonly previousValue: unknown;
+    }
+  | {
+      readonly type: 'remove';
+      readonly path: string;
+      readonly previousValue: unknown;
+    }
+  | {
+      readonly type: 'insert';
+      readonly path: string;
+      readonly index: number;
+      readonly value: unknown;
+    }
+  | {
+      readonly type: 'move';
+      readonly path: string;
+      readonly fromIndex: number;
+      readonly toIndex: number;
+    }
+  | {
+      readonly type: 'clear';
+      readonly path: string;
+      readonly previousValue: unknown[];
+    };
+
+export type FormPatchListener = (patches: readonly FormPatch[]) => void;
+
 export type FormsCoreForm<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
@@ -199,6 +232,7 @@ export type FormsCoreForm<
   submit(): Promise<void>;
   validate(): Promise<readonly string[]>;
   applyServerErrors(errors: Partial<Record<FieldPath<TValues>, string>>): void;
+  onPatch(listener: FormPatchListener): () => void;
   dispose(): void;
 };
 
@@ -404,6 +438,8 @@ type CachedArrayItem<TItem> = {
   dispose(): void;
 };
 
+type PatchArrayConfigs = ReadonlyMap<string, ArrayFieldConfig<unknown>>;
+
 type InternalControl = {
   dispose(): void;
 };
@@ -439,7 +475,15 @@ class MobxForm<
 
   readonly #stateBridge: MobxSelectorBridge<FormSnapshot>;
 
+  readonly #patchSubscription: StoreSubscription;
+
+  readonly #arrayConfigs = new Map<string, ArrayFieldConfig<unknown>>();
+
+  readonly #patchListeners = new Set<FormPatchListener>();
+
   readonly #serverErrors = new Map<string, string>();
+
+  #lastPatchedValues: TValues;
 
   #disposed = false;
 
@@ -469,6 +513,10 @@ class MobxForm<
       selectFormSnapshot,
       { equals: areFormSnapshotsEqual },
     );
+    this.#lastPatchedValues = clonePatchValue(this.#formApi.state.values);
+    this.#patchSubscription = this.#formApi.store.subscribe(() => {
+      this.emitPatchesFromState();
+    });
 
     const controls: Partial<Record<string, FormControl<unknown>>> = {};
 
@@ -507,6 +555,8 @@ class MobxForm<
       if (config === undefined) {
         continue;
       }
+
+      this.#arrayConfigs.set(name, config as ArrayFieldConfig<unknown>);
 
       const formArray = new MobxFormArray<
         ArrayItemValue<ArrayPathValue<TValues, typeof name>>,
@@ -557,6 +607,10 @@ class MobxForm<
   }
 
   reset(values?: TValues): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.clearServerErrors();
 
     if (values === undefined) {
@@ -568,6 +622,10 @@ class MobxForm<
   }
 
   async submit(): Promise<void> {
+    if (this.#disposed) {
+      return;
+    }
+
     try {
       await this.#formApi.handleSubmit();
     } finally {
@@ -576,6 +634,10 @@ class MobxForm<
   }
 
   async validate(): Promise<readonly string[]> {
+    if (this.#disposed) {
+      return this.errors;
+    }
+
     await Promise.all([
       this.#formApi.validateAllFields('submit'),
       Promise.resolve(this.#formApi.validate('submit')),
@@ -586,6 +648,10 @@ class MobxForm<
   }
 
   applyServerErrors(errors: Partial<Record<FieldPath<TValues>, string>>): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#serverErrors.clear();
 
     for (const [fieldName, error] of Object.entries(errors) as Array<
@@ -597,6 +663,18 @@ class MobxForm<
     }
 
     this.applyServerErrorMap();
+  }
+
+  onPatch(listener: FormPatchListener): () => void {
+    if (this.#disposed) {
+      return noop;
+    }
+
+    this.#patchListeners.add(listener);
+
+    return () => {
+      this.#patchListeners.delete(listener);
+    };
   }
 
   dispose(): void {
@@ -614,8 +692,32 @@ class MobxForm<
       array.dispose();
     }
 
+    this.#patchListeners.clear();
+    unsubscribeStoreSubscription(this.#patchSubscription);
     this.#stateBridge.dispose();
     this.#formCleanup();
+  }
+
+  private emitPatchesFromState(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const currentValues = this.#formApi.store.get().values;
+    const patches = diffFormValues(
+      this.#lastPatchedValues,
+      currentValues,
+      this.#arrayConfigs,
+    );
+    this.#lastPatchedValues = clonePatchValue(currentValues);
+
+    if (patches.length === 0 || this.#patchListeners.size === 0) {
+      return;
+    }
+
+    for (const listener of this.#patchListeners) {
+      listener(patches);
+    }
   }
 
   private clearServerErrors(): void {
@@ -789,6 +891,10 @@ class MobxFormControl<TValue, TValues extends object>
   }
 
   setValue(value: TValue): void {
+    if (this.#disposed) {
+      return;
+    }
+
     if (!Object.is(this.value, value)) {
       this.#clearServerError(this.#fieldName);
     }
@@ -797,10 +903,18 @@ class MobxFormControl<TValue, TValues extends object>
   }
 
   blur(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#fieldApi.handleBlur();
   }
 
   reset(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     this.#clearServerError(this.#fieldName);
     this.#formApi.resetField(this.#fieldName);
   }
@@ -923,6 +1037,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   push(value: TItem): void {
+    if (this.#disposed) {
+      return;
+    }
+
     const previousItems = [...this.value];
     assertUniqueArrayItemIds(
       this.#fieldName,
@@ -938,6 +1056,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   insert(index: number, value: TItem): void {
+    if (this.#disposed) {
+      return;
+    }
+
     const previousItems = [...this.value];
     const nextItems = [...previousItems];
     nextItems.splice(index, 0, value);
@@ -955,6 +1077,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   removeById(id: string): void {
+    if (this.#disposed) {
+      return;
+    }
+
     const index = this.value.findIndex(
       (item) => this.#config.getItemId(item) === id,
     );
@@ -967,6 +1093,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   removeAt(index: number): void {
+    if (this.#disposed) {
+      return;
+    }
+
     if (!isArrayIndexInBounds(this.value, index)) {
       return;
     }
@@ -981,6 +1111,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   move(fromIndex: number, toIndex: number): void {
+    if (this.#disposed) {
+      return;
+    }
+
     if (
       !isArrayIndexInBounds(this.value, fromIndex) ||
       !isArrayIndexInBounds(this.value, toIndex) ||
@@ -999,6 +1133,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   swap(leftIndex: number, rightIndex: number): void {
+    if (this.#disposed) {
+      return;
+    }
+
     if (
       !isArrayIndexInBounds(this.value, leftIndex) ||
       !isArrayIndexInBounds(this.value, rightIndex) ||
@@ -1017,6 +1155,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   clear(): void {
+    if (this.#disposed) {
+      return;
+    }
+
     if (this.value.length === 0) {
       return;
     }
@@ -1363,6 +1505,401 @@ function areStringArraysEqual(
 
   return previous.every((value, index) => value === next[index]);
 }
+
+function diffFormValues(
+  previous: unknown,
+  next: unknown,
+  arrayConfigs: PatchArrayConfigs,
+): readonly FormPatch[] {
+  const patches: FormPatch[] = [];
+  appendValuePatches('', previous, next, patches, arrayConfigs);
+
+  return patches;
+}
+
+function appendValuePatches(
+  path: string,
+  previous: unknown,
+  next: unknown,
+  patches: FormPatch[],
+  arrayConfigs: PatchArrayConfigs,
+): void {
+  if (Object.is(previous, next)) {
+    return;
+  }
+
+  if (Array.isArray(previous) && Array.isArray(next)) {
+    appendArrayPatches(path, previous, next, patches, arrayConfigs);
+    return;
+  }
+
+  if (isPlainRecord(previous) && isPlainRecord(next)) {
+    appendObjectPatches(path, previous, next, patches, arrayConfigs);
+    return;
+  }
+
+  patches.push({
+    type: 'set',
+    path,
+    value: clonePatchValue(next),
+    previousValue: clonePatchValue(previous),
+  });
+}
+
+function appendObjectPatches(
+  path: string,
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+  patches: FormPatch[],
+  arrayConfigs: PatchArrayConfigs,
+): void {
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
+
+  for (const key of keys) {
+    const keyPath = formatObjectFieldPath(path, key);
+    const hasPrevious = Object.hasOwn(previous, key);
+    const hasNext = Object.hasOwn(next, key);
+
+    if (!hasNext) {
+      patches.push({
+        type: 'remove',
+        path: keyPath,
+        previousValue: clonePatchValue(previous[key]),
+      });
+      continue;
+    }
+
+    if (!hasPrevious) {
+      patches.push({
+        type: 'set',
+        path: keyPath,
+        value: clonePatchValue(next[key]),
+        previousValue: undefined,
+      });
+      continue;
+    }
+
+    appendValuePatches(
+      keyPath,
+      previous[key],
+      next[key],
+      patches,
+      arrayConfigs,
+    );
+  }
+}
+
+function appendArrayPatches(
+  path: string,
+  previous: readonly unknown[],
+  next: readonly unknown[],
+  patches: FormPatch[],
+  arrayConfigs: PatchArrayConfigs,
+): void {
+  const arrayConfig = path === '' ? undefined : arrayConfigs.get(path);
+
+  if (arrayConfig !== undefined) {
+    appendConfiguredArrayPatches(
+      path,
+      previous,
+      next,
+      arrayConfig,
+      patches,
+      arrayConfigs,
+    );
+    return;
+  }
+
+  if (previous.length !== next.length) {
+    pushSetPatch(path, previous, next, patches);
+    return;
+  }
+
+  previous.forEach((previousItem, index) => {
+    appendValuePatches(
+      formatArrayIndexPath(path, index),
+      previousItem,
+      next[index],
+      patches,
+      arrayConfigs,
+    );
+  });
+}
+
+function appendConfiguredArrayPatches(
+  path: string,
+  previous: readonly unknown[],
+  next: readonly unknown[],
+  config: ArrayFieldConfig<unknown>,
+  patches: FormPatch[],
+  arrayConfigs: PatchArrayConfigs,
+): void {
+  const previousIds = getUniquePatchItemIds(path, previous, config.getItemId);
+  const nextIds = getUniquePatchItemIds(path, next, config.getItemId);
+
+  if (previousIds === undefined || nextIds === undefined) {
+    pushSetPatch(path, previous, next, patches);
+    return;
+  }
+
+  if (previous.length > 0 && next.length === 0) {
+    patches.push({
+      type: 'clear',
+      path,
+      previousValue: clonePatchArray(previous),
+    });
+    return;
+  }
+
+  const insertedIndex = findInsertedIndex(previousIds, nextIds);
+
+  if (insertedIndex !== undefined) {
+    patches.push({
+      type: 'insert',
+      path,
+      index: insertedIndex,
+      value: clonePatchValue(next[insertedIndex]),
+    });
+    return;
+  }
+
+  const removedIndex = findRemovedIndex(previousIds, nextIds);
+
+  if (removedIndex !== undefined) {
+    patches.push({
+      type: 'remove',
+      path: formatArrayIndexPath(path, removedIndex),
+      previousValue: clonePatchValue(previous[removedIndex]),
+    });
+    return;
+  }
+
+  if (areStringArraysEqual(previousIds, nextIds)) {
+    previous.forEach((previousItem, index) => {
+      appendValuePatches(
+        formatArrayIndexPath(path, index),
+        previousItem,
+        next[index],
+        patches,
+        arrayConfigs,
+      );
+    });
+    return;
+  }
+
+  const movedIndex = findMovedIndex(previousIds, nextIds);
+
+  if (movedIndex !== undefined) {
+    patches.push({
+      type: 'move',
+      path,
+      fromIndex: movedIndex.fromIndex,
+      toIndex: movedIndex.toIndex,
+    });
+    return;
+  }
+
+  pushSetPatch(path, previous, next, patches);
+}
+
+function pushSetPatch(
+  path: string,
+  previous: unknown,
+  next: unknown,
+  patches: FormPatch[],
+): void {
+  patches.push({
+    type: 'set',
+    path,
+    value: clonePatchValue(next),
+    previousValue: clonePatchValue(previous),
+  });
+}
+
+function getUniquePatchItemIds(
+  path: string,
+  items: readonly unknown[],
+  getItemId: (item: unknown) => string,
+): readonly string[] | undefined {
+  try {
+    assertUniqueArrayItemIds(path, items, getItemId);
+    return items.map(getItemId);
+  } catch {
+    return undefined;
+  }
+}
+
+function findInsertedIndex(
+  previousIds: readonly string[],
+  nextIds: readonly string[],
+): number | undefined {
+  if (nextIds.length !== previousIds.length + 1) {
+    return undefined;
+  }
+
+  let previousIndex = 0;
+  let insertedIndex: number | undefined;
+
+  for (let nextIndex = 0; nextIndex < nextIds.length; nextIndex += 1) {
+    if (
+      previousIndex < previousIds.length &&
+      nextIds[nextIndex] === previousIds[previousIndex]
+    ) {
+      previousIndex += 1;
+      continue;
+    }
+
+    if (insertedIndex !== undefined) {
+      return undefined;
+    }
+
+    insertedIndex = nextIndex;
+  }
+
+  return insertedIndex;
+}
+
+function findRemovedIndex(
+  previousIds: readonly string[],
+  nextIds: readonly string[],
+): number | undefined {
+  if (previousIds.length !== nextIds.length + 1) {
+    return undefined;
+  }
+
+  let nextIndex = 0;
+  let removedIndex: number | undefined;
+
+  for (
+    let previousIndex = 0;
+    previousIndex < previousIds.length;
+    previousIndex += 1
+  ) {
+    if (
+      nextIndex < nextIds.length &&
+      previousIds[previousIndex] === nextIds[nextIndex]
+    ) {
+      nextIndex += 1;
+      continue;
+    }
+
+    if (removedIndex !== undefined) {
+      return undefined;
+    }
+
+    removedIndex = previousIndex;
+  }
+
+  return removedIndex;
+}
+
+function findMovedIndex(
+  previousIds: readonly string[],
+  nextIds: readonly string[],
+): { readonly fromIndex: number; readonly toIndex: number } | undefined {
+  if (
+    previousIds.length !== nextIds.length ||
+    !haveSameStringMembers(previousIds, nextIds)
+  ) {
+    return undefined;
+  }
+
+  for (let fromIndex = 0; fromIndex < previousIds.length; fromIndex += 1) {
+    for (let toIndex = 0; toIndex < previousIds.length; toIndex += 1) {
+      if (fromIndex === toIndex) {
+        continue;
+      }
+
+      if (
+        areStringArraysEqual(
+          moveArrayItem(previousIds, fromIndex, toIndex),
+          nextIds,
+        )
+      ) {
+        return { fromIndex, toIndex };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function haveSameStringMembers(
+  previous: readonly string[],
+  next: readonly string[],
+): boolean {
+  if (previous.length !== next.length) {
+    return false;
+  }
+
+  const nextIds = new Set(next);
+
+  return previous.every((id) => nextIds.has(id));
+}
+
+function moveArrayItem<TItem>(
+  value: readonly TItem[],
+  fromIndex: number,
+  toIndex: number,
+): readonly TItem[] {
+  const next = [...value];
+  const [item] = next.splice(fromIndex, 1);
+
+  if (item === undefined) {
+    return value;
+  }
+
+  next.splice(toIndex, 0, item);
+
+  return next;
+}
+
+function formatObjectFieldPath(basePath: string, key: string): string {
+  return basePath === '' ? key : `${basePath}.${key}`;
+}
+
+function formatArrayIndexPath(basePath: string, index: number): string {
+  return `${basePath}[${index}]`;
+}
+
+function clonePatchArray(value: readonly unknown[]): unknown[] {
+  return value.map((item) => clonePatchValue(item));
+}
+
+function clonePatchValue<TValue>(value: TValue): TValue {
+  if (Array.isArray(value)) {
+    return value.map((item) => clonePatchValue(item)) as TValue;
+  }
+
+  if (isPlainRecord(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, clonePatchValue(item)]),
+    ) as TValue;
+  }
+
+  return value;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+}
+
+function unsubscribeStoreSubscription(subscription: StoreSubscription): void {
+  if (typeof subscription === 'function') {
+    subscription();
+    return;
+  }
+
+  subscription.unsubscribe();
+}
+
+function noop(): void {}
 
 function createArrayItemCacheKey(id: string, index: number): string {
   return `${id}:${index}`;
