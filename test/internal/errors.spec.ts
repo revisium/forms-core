@@ -17,6 +17,10 @@ describe('error normalization', () => {
     );
     expect(normalizeFirstError({ code: 'invalid' })).toBe('{"code":"invalid"}');
     expect(normalizeFirstError(404)).toBe('404');
+    expect(normalizeFirstError(true)).toBe('true');
+    expect(normalizeFirstError(function invalid() {})).toBe(
+      '[function invalid]',
+    );
   });
 
   it('normalizes form error collections', () => {

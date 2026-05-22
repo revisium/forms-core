@@ -33,7 +33,7 @@ export function normalizeFirstError(value: unknown): PublicFieldError {
     return stringifyObjectError(value);
   }
 
-  return String(value);
+  return stringifyPrimitiveError(value);
 }
 
 export function normalizeErrors(value: unknown): readonly string[] {
@@ -70,5 +70,21 @@ function stringifyObjectError(value: object): string {
     return JSON.stringify(value);
   } catch {
     return Object.prototype.toString.call(value);
+  }
+}
+
+function stringifyPrimitiveError(value: unknown): string {
+  switch (typeof value) {
+    case 'boolean':
+      return value ? 'true' : 'false';
+    case 'number':
+    case 'bigint':
+      return value.toString();
+    case 'symbol':
+      return value.description ?? value.toString();
+    case 'function':
+      return value.name.length > 0 ? `[function ${value.name}]` : '[function]';
+    default:
+      return 'Unknown validation error';
   }
 }

@@ -162,7 +162,7 @@ class MobxForm<
     const rawFormApi = new FormApi({
       defaultValues: options.defaultValues,
     });
-    this.#formApi = rawFormApi as unknown as TanStackFormApi<TValues>;
+    this.#formApi = rawFormApi;
     this.#formCleanup = this.#formApi.mount();
     this.#stateBridge = createMobxSelectorBridge(
       this.#formApi.store,
