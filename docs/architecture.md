@@ -341,7 +341,7 @@ keep the public API readable.
 - dispose field/array wrappers;
 - stop patch listeners;
 - cancel or ignore pending async validation updates where possible;
-- leave public command methods either no-op or throw a documented disposed error.
+- treat public command methods as no-op after disposal.
 
 Tests must prove bridge unsubscribe happens.
 

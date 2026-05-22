@@ -136,12 +136,12 @@ Exit criteria:
 
 ## PR 7 - Patches, Disposal, And Hardening
 
-- [ ] Implement `onPatch`.
-- [ ] Diff scalar, nested object, and array changes.
-- [ ] Emit useful patches for autosave.
-- [ ] Dispose patch listeners.
-- [ ] Harden disposed-object behavior.
-- [ ] Add tests for scalar patches, nested patches, array patches, listener
+- [x] Implement `onPatch`.
+- [x] Diff scalar, nested object, and array changes.
+- [x] Emit useful patches for autosave.
+- [x] Dispose patch listeners.
+- [x] Harden disposed-object behavior.
+- [x] Add tests for scalar patches, nested patches, array patches, listener
       disposal, bridge disposal, and form disposal.
 
 Exit criteria:

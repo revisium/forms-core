@@ -12,8 +12,8 @@ lifecycle, and consumers should observe public getters with MobX `computed`,
 This repository is in active implementation. The package scaffold, local
 toolchain, CI/Sonar wiring, private MobX selector bridge, scalar form/control
 wrappers, validation adapter, explicit server-error lifecycle, nested path
-controls, and stable-id arrays are in place. Patch emission and final README/API
-polish are tracked in the implementation steps.
+controls, stable-id arrays, patch emission, and disposal hardening are in place.
+Final README/API polish is tracked in the implementation steps.
 
 ## Start Here
 
