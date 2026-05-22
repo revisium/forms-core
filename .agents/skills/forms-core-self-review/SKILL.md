@@ -26,7 +26,7 @@ description when requested, or PR comment.
 - `docs/quality-gates.md`.
 - `docs/readme-guidelines.md` when README changes.
 - `docs/review/forms-core-checklist.md`.
-- Affected step in `docs/steps.md`.
+- `docs/release-train.md` when release or publish behavior changes.
 
 ## Review Steps
 

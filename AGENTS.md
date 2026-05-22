@@ -8,7 +8,7 @@ MCP memory when project context must be read or written.
 
 - **Docs first.** Before implementing behavior, read and update the matching
   source-of-truth doc: [docs/architecture.md](./docs/architecture.md),
-  [docs/steps.md](./docs/steps.md), [docs/pr-plan.md](./docs/pr-plan.md),
+  [docs/pr-plan.md](./docs/pr-plan.md),
   [docs/release-train.md](./docs/release-train.md),
   [docs/readme-guidelines.md](./docs/readme-guidelines.md),
   [docs/quality-gates.md](./docs/quality-gates.md), or [REVIEW.md](./REVIEW.md).
@@ -26,13 +26,7 @@ MCP memory when project context must be read or written.
   `@tanstack/form-core` and `mobx` unless the docs and user explicitly approve
   another dependency. Add test dependencies only when the repo lacks a suitable
   test runner.
-- **Update the step tracker.** Every implementation PR must update
-  [docs/steps.md](./docs/steps.md) with completed checks and remaining work.
-  The final cleanup PR removes or replaces this temporary tracker after durable
-  docs, tests, and README cover the result.
 - **Use repo-local skills when available.**
-  [`forms-core-implementation-step`](./.agents/skills/forms-core-implementation-step/SKILL.md)
-  is the normal iterative workflow.
   [`forms-core-general-checks`](./.agents/skills/forms-core-general-checks/SKILL.md)
   is the baseline verification workflow.
   [`forms-core-self-review`](./.agents/skills/forms-core-self-review/SKILL.md)
@@ -55,23 +49,15 @@ MCP memory when project context must be read or written.
 
 ## Quality Gates
 
-For this docs-only bootstrap phase:
-
-```bash
-git status --short --branch
-git diff --check
-```
-
-After the package scaffold lands, update this section and
-[docs/quality-gates.md](./docs/quality-gates.md), then use the repository
-scripts. The intended full gate is:
+Use the repository verification script before handoff, PR creation, or review
+replies:
 
 ```bash
 npm run verify
 ```
 
-The planned `verify` script should run TypeScript, lint, unit tests, build, and
-Markdown/skill checks.
+The `verify` script runs Markdown/skill lint, formatting, TypeScript, ESLint,
+unit tests with coverage, and package build.
 
 Sonar has zero-tolerance semantics for pull requests in this repo. A passing PR
 Quality Gate is not enough by itself: always inspect unresolved Sonar issues for
@@ -84,5 +70,5 @@ only when the repo permits it.
 ## Handoff
 
 Start from [docs/handoff/README.md](./docs/handoff/README.md). It links the
-implementation steps, review contract, architecture, and reusable bootstrap
-pattern for other libraries.
+review contract, architecture, quality gates, release docs, and reusable
+bootstrap pattern for other libraries.

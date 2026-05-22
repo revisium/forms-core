@@ -37,7 +37,8 @@ After `1.0.0`, use normal SemVer:
 - [ ] `npm pack --dry-run` shows only expected files.
 - [ ] README examples compile or are covered by tests.
 - [ ] `docs/limitations.md` is current.
-- [ ] `docs/steps.md` has been removed or replaced with durable history.
+- [ ] Temporary implementation trackers have been removed or replaced with
+      durable docs.
 - [ ] package exports are reviewed.
 - [ ] no React/UI dependency is present.
 - [ ] `@tanstack/form-core` and `mobx` dependency ranges are intentional.

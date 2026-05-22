@@ -10,8 +10,6 @@ update the canonical docs first.
 
 ## Skills
 
-- [`forms-core-implementation-step`](./skills/forms-core-implementation-step/SKILL.md)
-  - normal iterative implementation workflow.
 - [`forms-core-general-checks`](./skills/forms-core-general-checks/SKILL.md)
   - baseline verification before handoff, PR creation, and review replies.
 - [`forms-core-self-review`](./skills/forms-core-self-review/SKILL.md)

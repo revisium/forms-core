@@ -37,7 +37,7 @@ ready, and after addressing review feedback.
    - `docs/architecture.md`;
    - `docs/quality-gates.md`;
    - `docs/review/forms-core-checklist.md`;
-   - affected step in `docs/steps.md`.
+   - `docs/release-train.md` for release or publish changes.
 
 ## Required Commands
 

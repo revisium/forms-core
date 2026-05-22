@@ -14,11 +14,10 @@ Before reviewing a PR, read:
 
 1. [docs/architecture.md](./docs/architecture.md)
 2. [docs/review/forms-core-checklist.md](./docs/review/forms-core-checklist.md)
-3. [docs/steps.md](./docs/steps.md) while implementation is in progress
-4. [docs/pr-plan.md](./docs/pr-plan.md)
-5. [docs/quality-gates.md](./docs/quality-gates.md)
-6. [docs/readme-guidelines.md](./docs/readme-guidelines.md) for README changes
-7. [docs/release-train.md](./docs/release-train.md) for publish or version work
+3. [docs/pr-plan.md](./docs/pr-plan.md)
+4. [docs/quality-gates.md](./docs/quality-gates.md)
+5. [docs/readme-guidelines.md](./docs/readme-guidelines.md) for README changes
+6. [docs/release-train.md](./docs/release-train.md) for publish or version work
 
 ## Source Of Truth
 
