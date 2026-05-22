@@ -30,7 +30,7 @@ ready, and after addressing review feedback.
    - validation/server errors;
    - arrays/nested paths;
    - patches/disposal;
-   - release readiness.
+   - release or publish readiness.
 
 3. Read the right contract:
    - `REVIEW.md`;
@@ -41,7 +41,7 @@ ready, and after addressing review feedback.
 
 ## Required Commands
 
-For docs-only bootstrap changes:
+For docs-only changes:
 
 ```bash
 git diff --check
@@ -55,7 +55,7 @@ After package scaffold exists:
 npm run verify
 ```
 
-Before release readiness:
+Before release or publish handoff:
 
 ```bash
 npm pack --dry-run

@@ -13,8 +13,7 @@ For a library, that means the initial PR creates:
 - the agent boot file;
 - the review contract;
 - the architecture contract;
-- the step tracker;
-- the PR sequence;
+- temporary step trackers for the initial implementation sequence;
 - repo-local skills and rules;
 - local quality gates, including ESLint, coverage, CI Sonar, and local Sonar;
 - a zero-tolerance Sonar issue-inspection rule, because a passing Quality Gate
@@ -50,8 +49,8 @@ README.md
 .agents/rules/*.mdc
 .claude/skills -> ../.agents/skills
 docs/architecture.md
-docs/steps.md
-docs/pr-plan.md
+docs/steps.md                  # temporary, remove before release readiness
+docs/pr-plan.md                # temporary, remove before release readiness
 docs/release-train.md
 docs/review/<project>-checklist.md
 docs/handoff/README.md
@@ -75,7 +74,7 @@ When copying this pattern:
 2. Replace architecture constraints with project-specific constraints.
 3. Replace allowed dependency policy.
 4. Replace review checklist items.
-5. Replace PR plan steps.
+5. Replace implementation steps.
 6. Keep the final cleanup rule for temporary step trackers.
 7. Keep symlink layout compatible with Claude Code:
    `CLAUDE.md -> AGENTS.md` and `.claude/skills -> ../.agents/skills`.

@@ -7,7 +7,7 @@ This is the starting point for an agent or developer taking over the repository.
 1. [AGENTS.md](../../AGENTS.md)
 2. [REVIEW.md](../../REVIEW.md)
 3. [docs/architecture.md](../architecture.md)
-4. [docs/pr-plan.md](../pr-plan.md)
+4. [docs/reactivity-matrix.md](../reactivity-matrix.md)
 5. [docs/quality-gates.md](../quality-gates.md)
 6. [docs/readme-guidelines.md](../readme-guidelines.md)
 7. [docs/review/forms-core-checklist.md](../review/forms-core-checklist.md)
@@ -17,8 +17,8 @@ This is the starting point for an agent or developer taking over the repository.
 ## Normal Iteration
 
 1. Check branch and worktree.
-2. Confirm the intended scope from [docs/pr-plan.md](../pr-plan.md) or the
-   current user request.
+2. Confirm the intended scope from the current user request and the durable docs
+   above.
 3. Update durable docs when behavior, public API, release workflow, or review
    policy changes.
 4. Add or update tests for real behavior.

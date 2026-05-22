@@ -1,14 +1,13 @@
 # AGENTS.md - forms-core
 
 Operational notes for AI coding agents working in this repository. The parent
-Revisium `AGENTS.md` also applies: do not use local memory files; use Revisium
-MCP memory when project context must be read or written.
+Revisium `AGENTS.md` also applies.
 
 ## Ground Rules
 
 - **Docs first.** Before implementing behavior, read and update the matching
   source-of-truth doc: [docs/architecture.md](./docs/architecture.md),
-  [docs/pr-plan.md](./docs/pr-plan.md),
+  [docs/reactivity-matrix.md](./docs/reactivity-matrix.md),
   [docs/release-train.md](./docs/release-train.md),
   [docs/readme-guidelines.md](./docs/readme-guidelines.md),
   [docs/quality-gates.md](./docs/quality-gates.md), or [REVIEW.md](./REVIEW.md).

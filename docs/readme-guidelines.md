@@ -3,26 +3,17 @@
 The README is the public package landing page. It should be useful for a new
 consumer who does not know the implementation history.
 
-## Timing
-
-- PR 1 may keep a bootstrap README that points to docs.
-- PR 2 should add local setup and command sections once scripts exist.
-- PR 4 should add the first real scalar form example.
-- PR 5 should add validation and server-error examples.
-- PR 6 should add nested path and array examples.
-- PR 7 should add `onPatch` and disposal examples.
-- PR 8 should replace bootstrap wording with release-ready package docs.
-
 ## Target Structure
 
-Use this structure for the release-ready README:
+Use this structure for the public README:
 
 ```text
-# forms-core
+Centered package header:
+  # @revisium/forms-core
 
 Short one-liner.
 
-Badges: npm version, CI, license, Sonar/quality gate when configured.
+Badges: CI, Sonar quality gate, Sonar coverage, npm version, npm alpha, license.
 
 ## Why
 What problem the package solves and why it is headless.

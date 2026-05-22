@@ -1,11 +1,26 @@
-# forms-core
+<!-- markdownlint-disable MD033 MD041 -->
+<div align="center">
+
+# @revisium/forms-core
 
 Headless TypeScript forms over `@tanstack/form-core` with a MobX-native public
 API.
 
+**TanStack engine. MobX public surface. No React runtime.**
+
 [![CI](https://github.com/revisium/forms-core/actions/workflows/ci.yml/badge.svg)](https://github.com/revisium/forms-core/actions/workflows/ci.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=revisium_forms-core&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=revisium_forms-core)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=revisium_forms-core&metric=coverage)](https://sonarcloud.io/summary/new_code?id=revisium_forms-core)
+[![npm](https://img.shields.io/npm/v/@revisium/forms-core?color=red)](https://www.npmjs.com/package/@revisium/forms-core)
+[![npm alpha](https://img.shields.io/npm/v/@revisium/forms-core/alpha?label=alpha&color=orange)](https://www.npmjs.com/package/@revisium/forms-core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+> Forms live outside React component lifecycle.
+> Consumers observe public getters with MobX `computed`, `reaction`, and
+> `autorun`.
+> TanStack store and error-map details stay private.
+
+</div>
 
 ## Why
 
