@@ -107,6 +107,8 @@ form.controls.email.isTouched;
 form.controls.email.setValue('user@example.com');
 form.controls.email.blur();
 
+form.controls['profile.name'].value;
+
 form.arrays.members.items;
 form.arrays.members.push({ id: '2', name: '' });
 form.arrays.members.removeById('2');
@@ -139,6 +141,11 @@ Responsibilities:
 
 Each control owns or references a TanStack `FieldApi` for its path.
 
+Nested controls use TanStack dot/bracket paths as public keys, for example
+`form.controls['profile.name']` or `form.controls['members[0].name']`. Top-level
+paths remain available through normal property access, such as
+`form.controls.email`.
+
 Responsibilities:
 
 - use field-level selectors for value and meta;
@@ -166,7 +173,8 @@ Arrays support nested paths and stable public identity.
 
 Rules:
 
-- `getItemId` is required.
+- `getItemId` is required and must return a unique stable id for every item in
+  the array.
 - Public `items` expose stable ids, current indexes, and item controls/value.
 - Public identity never relies on array index.
 - Internally, TanStack index paths may be used.

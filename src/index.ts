@@ -1,8 +1,15 @@
+export { arrayField } from './array-field.js';
 export { createForm } from './form.js';
 export { field } from './field.js';
+export type { ArrayFieldConfig } from './array-field.js';
 export type {
+  ArrayFieldConfigs,
+  ArrayItemControls,
   CreateFormOptions,
   FieldConfigs,
+  FormArray,
+  FormArrayItem,
+  FormArrays,
   FormControl,
   FormControls,
   FormAsyncValidator,

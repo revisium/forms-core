@@ -15,7 +15,9 @@ implementation PR confirms or changes a limitation.
 
 - Deep path typing may be limited. Prefer a clean public API with internal casts
   over leaking heavy TanStack generics.
-- Array server-error reindexing after move/remove needs careful tests.
+- Array server-error reindexing is implemented for `arrayField` wrappers with
+  stable ids. Future low-level array path APIs without `getItemId` would need a
+  separate path-index policy.
 - Patch diffing may fall back to `set` patches when a complex array edit cannot
   be represented safely.
 - `displayValue` initially equals `value` unless a documented formatter is
