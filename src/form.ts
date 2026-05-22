@@ -3,6 +3,7 @@ import { FieldApi, FormApi } from '@tanstack/form-core';
 import type {
   DeepKeys,
   DeepValue,
+  DeepKeysOfType,
   FieldAsyncValidateOrFn,
   FieldApiOptions,
   FieldValidateOrFn,
@@ -11,6 +12,7 @@ import type {
   ValidationCause,
 } from '@tanstack/form-core';
 
+import type { ArrayFieldConfig } from './array-field.js';
 import type { FieldConfig, FieldValidators } from './field.js';
 import {
   normalizeErrors,
@@ -18,40 +20,89 @@ import {
   type PublicFieldError,
 } from './internal/errors.js';
 import {
+  formatArrayItemPath,
+  getPathValue,
+  parseArrayItemPath,
+} from './internal/path.js';
+import {
   createMobxSelectorBridge,
   type MobxSelectorBridge,
   type SubscribableStore,
 } from './internal/mobx-selector-bridge.js';
 
 type StringKeyOf<TValues extends object> = Extract<keyof TValues, string>;
+type FieldPath<TValues extends object> = Extract<DeepKeys<TValues>, string>;
+type FieldPathValue<
+  TValues extends object,
+  TName extends FieldPath<TValues>,
+> = DeepValue<TValues, TName>;
+
+type ArrayPath<TValues extends object> = Extract<
+  DeepKeysOfType<TValues, unknown[]>,
+  string
+>;
+
+type ArrayPathValue<
+  TValues extends object,
+  TName extends ArrayPath<TValues>,
+> = DeepValue<TValues, TName>;
+
+type ArrayItemValue<TValue> =
+  TValue extends ReadonlyArray<infer TItem>
+    ? TItem
+    : TValue extends Array<infer TItem>
+      ? TItem
+      : never;
 
 export type FieldConfigs<TValues extends object> = Partial<{
-  readonly [TName in StringKeyOf<TValues>]: FieldConfig<
-    TValues[TName],
+  readonly [TName in FieldPath<TValues>]: FieldConfig<
+    FieldPathValue<TValues, TName>,
     TValues
+  >;
+}>;
+
+export type ArrayFieldConfigs<TValues extends object> = Partial<{
+  readonly [TName in ArrayPath<TValues>]: ArrayFieldConfig<
+    ArrayItemValue<ArrayPathValue<TValues, TName>>
   >;
 }>;
 
 type ControlName<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
-> = Extract<keyof TFields, StringKeyOf<TValues>>;
+> = Extract<keyof TFields, FieldPath<TValues>>;
 
 export type FormControls<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
 > = {
   readonly [TName in ControlName<TValues, TFields>]: FormControl<
-    TValues[TName]
+    FieldPathValue<TValues, TName>
+  >;
+};
+
+type ArrayName<
+  TValues extends object,
+  TArrays extends ArrayFieldConfigs<TValues>,
+> = Extract<keyof TArrays, ArrayPath<TValues>>;
+
+export type FormArrays<
+  TValues extends object,
+  TArrays extends ArrayFieldConfigs<TValues>,
+> = {
+  readonly [TName in ArrayName<TValues, TArrays>]: FormArray<
+    ArrayItemValue<ArrayPathValue<TValues, TName>>
   >;
 };
 
 export type CreateFormOptions<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
+  TArrays extends ArrayFieldConfigs<TValues> = Record<never, never>,
 > = {
   readonly defaultValues: TValues;
   readonly fields: TFields;
+  readonly arrays?: TArrays;
   readonly validators?: FormValidators<TValues>;
 };
 
@@ -59,7 +110,7 @@ export type FormValidationResult<TValues extends object> =
   | string
   | {
       readonly form?: string;
-      readonly fields?: Partial<Record<StringKeyOf<TValues>, string>>;
+      readonly fields?: Partial<Record<FieldPath<TValues>, string>>;
     }
   | null
   | undefined
@@ -106,11 +157,38 @@ export type FormControl<TValue> = {
   reset(): void;
 };
 
+export type ArrayItemControls<TItem> = TItem extends object
+  ? {
+      readonly [TName in StringKeyOf<TItem>]: FormControl<TItem[TName]>;
+    }
+  : Record<string, never>;
+
+export type FormArrayItem<TItem> = {
+  readonly id: string;
+  readonly index: number;
+  readonly value: TItem;
+  readonly controls: ArrayItemControls<TItem>;
+};
+
+export type FormArray<TItem> = {
+  readonly value: readonly TItem[];
+  readonly items: readonly FormArrayItem<TItem>[];
+  push(value: TItem): void;
+  insert(index: number, value: TItem): void;
+  removeById(id: string): void;
+  removeAt(index: number): void;
+  move(fromIndex: number, toIndex: number): void;
+  swap(leftIndex: number, rightIndex: number): void;
+  clear(): void;
+};
+
 export type FormsCoreForm<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
+  TArrays extends ArrayFieldConfigs<TValues> = Record<never, never>,
 > = {
   readonly controls: FormControls<TValues, TFields>;
+  readonly arrays: FormArrays<TValues, TArrays>;
   readonly isValid: boolean;
   readonly isDirty: boolean;
   readonly isTouched: boolean;
@@ -120,7 +198,7 @@ export type FormsCoreForm<
   reset(values?: TValues): void;
   submit(): Promise<void>;
   validate(): Promise<readonly string[]>;
-  applyServerErrors(errors: Record<string, string>): void;
+  applyServerErrors(errors: Partial<Record<FieldPath<TValues>, string>>): void;
   dispose(): void;
 };
 
@@ -198,6 +276,15 @@ type TanStackFieldApi<TValue> = {
   handleBlur: () => void;
 };
 
+type TanStackArrayFieldApi<TItem> = TanStackFieldApi<TItem[]> & {
+  pushValue: (value: TItem) => void;
+  insertValue: (index: number, value: TItem) => void;
+  removeValue: (index: number) => void;
+  moveValue: (fromIndex: number, toIndex: number) => void;
+  swapValues: (leftIndex: number, rightIndex: number) => void;
+  clearValues: () => void;
+};
+
 type AdaptedFieldValidators<TValue, TValues extends object> = {
   onChange?: (context: { readonly value: TValue }) => unknown;
   onChangeAsync?: (context: {
@@ -205,14 +292,14 @@ type AdaptedFieldValidators<TValue, TValues extends object> = {
     readonly signal: AbortSignal;
   }) => unknown;
   onChangeAsyncDebounceMs?: number;
-  onChangeListenTo?: readonly StringKeyOf<TValues>[];
+  onChangeListenTo?: readonly FieldPath<TValues>[];
   onBlur?: (context: { readonly value: TValue }) => unknown;
   onBlurAsync?: (context: {
     readonly value: TValue;
     readonly signal: AbortSignal;
   }) => unknown;
   onBlurAsyncDebounceMs?: number;
-  onBlurListenTo?: readonly StringKeyOf<TValues>[];
+  onBlurListenTo?: readonly FieldPath<TValues>[];
   onSubmit?: (context: { readonly value: TValue }) => unknown;
   onSubmitAsync?: (context: {
     readonly value: TValue;
@@ -307,6 +394,16 @@ type ControlSnapshot<TValue> = {
   readonly isValidating: boolean;
 };
 
+type ArraySnapshot<TItem> = {
+  readonly value: readonly TItem[];
+};
+
+type CachedArrayItem<TItem> = {
+  item: FormArrayItem<TItem>;
+  readonly controls: ArrayItemControls<TItem>;
+  dispose(): void;
+};
+
 type InternalControl = {
   dispose(): void;
 };
@@ -314,21 +411,25 @@ type InternalControl = {
 export function createForm<
   TValues extends object,
   const TFields extends FieldConfigs<TValues>,
+  const TArrays extends ArrayFieldConfigs<TValues> = Record<never, never>,
 >(
-  options: CreateFormOptions<TValues, TFields>,
-): FormsCoreForm<TValues, TFields> {
+  options: CreateFormOptions<TValues, TFields, TArrays>,
+): FormsCoreForm<TValues, TFields, TArrays> {
   return new MobxForm(options);
 }
 
 class MobxForm<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
-> implements FormsCoreForm<TValues, TFields> {
+  TArrays extends ArrayFieldConfigs<TValues>,
+> implements FormsCoreForm<TValues, TFields, TArrays> {
   readonly controls: FormControls<TValues, TFields>;
 
-  readonly #controls: readonly InternalControl[];
+  readonly arrays: FormArrays<TValues, TArrays>;
 
-  readonly #controlByName: ReadonlyMap<string, InternalControl>;
+  readonly #controls: InternalControl[] = [];
+
+  readonly #arrays: InternalControl[] = [];
 
   readonly #formApi: TanStackFormApi<TValues>;
 
@@ -342,7 +443,7 @@ class MobxForm<
 
   #disposed = false;
 
-  constructor(options: CreateFormOptions<TValues, TFields>) {
+  constructor(options: CreateFormOptions<TValues, TFields, TArrays>) {
     const rawFormApi = new FormApi<
       TValues,
       RawFormValidate<TValues>,
@@ -370,17 +471,18 @@ class MobxForm<
     );
 
     const controls: Partial<Record<string, FormControl<unknown>>> = {};
-    const internalControls: InternalControl[] = [];
-    const controlByName = new Map<string, InternalControl>();
 
-    for (const name of fieldConfigKeys(options.fields)) {
+    for (const name of fieldConfigKeys<TValues, TFields>(options.fields)) {
       const config = options.fields[name];
 
       if (config === undefined) {
         continue;
       }
 
-      const control = new MobxFormControl<TValues[typeof name], TValues>({
+      const control = new MobxFormControl<
+        FieldPathValue<TValues, typeof name>,
+        TValues
+      >({
         fieldName: name,
         formApi: this.#formApi,
         clearServerError: (fieldName) => {
@@ -392,13 +494,42 @@ class MobxForm<
       });
 
       controls[name] = control;
-      internalControls.push(control);
-      controlByName.set(name, control);
+      this.#controls.push(control);
     }
 
     this.controls = controls as FormControls<TValues, TFields>;
-    this.#controls = internalControls;
-    this.#controlByName = controlByName;
+
+    const arrays: Partial<Record<string, FormArray<unknown>>> = {};
+
+    for (const name of arrayConfigKeys(options.arrays ?? ({} as TArrays))) {
+      const config = options.arrays?.[name];
+
+      if (config === undefined) {
+        continue;
+      }
+
+      const formArray = new MobxFormArray<
+        ArrayItemValue<ArrayPathValue<TValues, typeof name>>,
+        TValues
+      >({
+        fieldName: name,
+        formApi: this.#formApi,
+        rawFormApi,
+        config,
+        clearServerError: (fieldName) => {
+          this.clearServerError(fieldName);
+        },
+        getSubmissionAttempts: () => this.#stateBridge.value.submissionAttempts,
+        remapServerErrors: (fieldName, previousItems, getItemId) => {
+          this.remapArrayServerErrors(fieldName, previousItems, getItemId);
+        },
+      });
+
+      arrays[name] = formArray;
+      this.#arrays.push(formArray);
+    }
+
+    this.arrays = arrays as FormArrays<TValues, TArrays>;
   }
 
   get isValid(): boolean {
@@ -454,11 +585,13 @@ class MobxForm<
     return this.errors;
   }
 
-  applyServerErrors(errors: Record<string, string>): void {
+  applyServerErrors(errors: Partial<Record<FieldPath<TValues>, string>>): void {
     this.#serverErrors.clear();
 
-    for (const [fieldName, error] of Object.entries(errors)) {
-      if (this.#controlByName.has(fieldName)) {
+    for (const [fieldName, error] of Object.entries(errors) as Array<
+      [string, string | undefined]
+    >) {
+      if (error !== undefined) {
         this.#serverErrors.set(fieldName, error);
       }
     }
@@ -475,6 +608,10 @@ class MobxForm<
 
     for (const control of this.#controls) {
       control.dispose();
+    }
+
+    for (const array of this.#arrays) {
+      array.dispose();
     }
 
     this.#stateBridge.dispose();
@@ -498,6 +635,63 @@ class MobxForm<
     (this.#rawFormApi as unknown as TanStackServerErrorApi).setErrorMap({
       onServer: { fields },
     });
+  }
+
+  private remapArrayServerErrors<TItem>(
+    fieldName: string,
+    previousItems: readonly TItem[],
+    getItemId: (item: TItem) => string,
+  ): void {
+    if (this.#serverErrors.size === 0) {
+      return;
+    }
+
+    const previousErrors = Array.from(this.#serverErrors.entries());
+    const errorsByItemId = new Map<string, Array<readonly [string, string]>>();
+
+    for (const [path, error] of previousErrors) {
+      const parsed = parseArrayItemPath(path, fieldName);
+
+      if (parsed === undefined) {
+        continue;
+      }
+
+      const item = previousItems[parsed.index];
+
+      if (item === undefined) {
+        continue;
+      }
+
+      const itemId = getItemId(item);
+      const itemErrors = errorsByItemId.get(itemId) ?? [];
+      itemErrors.push([parsed.suffix, error]);
+      errorsByItemId.set(itemId, itemErrors);
+      this.#serverErrors.delete(path);
+    }
+
+    if (errorsByItemId.size === 0) {
+      return;
+    }
+
+    const nextValue = getPathValue(this.#formApi.state.values, fieldName);
+    const nextItems = Array.isArray(nextValue) ? (nextValue as TItem[]) : [];
+
+    nextItems.forEach((item, index) => {
+      const itemErrors = errorsByItemId.get(getItemId(item));
+
+      if (itemErrors === undefined) {
+        return;
+      }
+
+      for (const [suffix, error] of itemErrors) {
+        this.#serverErrors.set(
+          formatArrayItemPath(fieldName, index, suffix),
+          error,
+        );
+      }
+    });
+
+    this.applyServerErrorMap();
   }
 }
 
@@ -619,11 +813,292 @@ class MobxFormControl<TValue, TValues extends object>
   }
 }
 
+class MobxFormArray<TItem, TValues extends object>
+  implements FormArray<TItem>, InternalControl
+{
+  readonly #fieldName: string;
+
+  readonly #arrayApi: TanStackArrayFieldApi<TItem>;
+
+  readonly #arrayCleanup: () => void;
+
+  readonly #config: ArrayFieldConfig<TItem>;
+
+  readonly #clearServerError: (fieldName: string) => void;
+
+  readonly #getSubmissionAttempts: () => number;
+
+  readonly #remapServerErrors: (
+    fieldName: string,
+    previousItems: readonly TItem[],
+    getItemId: (item: TItem) => string,
+  ) => void;
+
+  readonly #formApi: TanStackFormApi<TValues>;
+
+  readonly #rawFormApi: RawTanStackFormApi<TValues>;
+
+  readonly #stateBridge: MobxSelectorBridge<ArraySnapshot<TItem>>;
+
+  readonly #itemCache = new Map<string, CachedArrayItem<TItem>>();
+
+  #disposed = false;
+
+  constructor(options: {
+    readonly fieldName: string;
+    readonly formApi: TanStackFormApi<TValues>;
+    readonly rawFormApi: RawTanStackFormApi<TValues>;
+    readonly config: ArrayFieldConfig<TItem>;
+    readonly clearServerError: (fieldName: string) => void;
+    readonly getSubmissionAttempts: () => number;
+    readonly remapServerErrors: (
+      fieldName: string,
+      previousItems: readonly TItem[],
+      getItemId: (item: TItem) => string,
+    ) => void;
+  }) {
+    this.#fieldName = options.fieldName;
+    this.#formApi = options.formApi;
+    this.#rawFormApi = options.rawFormApi;
+    this.#config = options.config;
+    this.#clearServerError = options.clearServerError;
+    this.#getSubmissionAttempts = options.getSubmissionAttempts;
+    this.#remapServerErrors = options.remapServerErrors;
+
+    const fieldApiOptions = {
+      form: options.rawFormApi,
+      name: options.fieldName,
+    } as unknown as RawFieldApiOptions<TValues>;
+    const fieldApi = new FieldApi(fieldApiOptions);
+
+    this.#arrayApi = fieldApi as unknown as TanStackArrayFieldApi<TItem>;
+    this.#arrayCleanup = this.#arrayApi.mount();
+    this.#stateBridge = createMobxSelectorBridge(
+      this.#arrayApi.store,
+      selectArraySnapshot,
+      { equals: areArraySnapshotsEqual },
+    );
+  }
+
+  get value(): readonly TItem[] {
+    return this.#stateBridge.value.value;
+  }
+
+  get items(): readonly FormArrayItem<TItem>[] {
+    const value = this.value;
+    const activeCacheKeys = new Set<string>();
+    const items = value.map((item, index) => {
+      const id = this.#config.getItemId(item);
+      const cacheKey = createArrayItemCacheKey(id, index);
+      activeCacheKeys.add(cacheKey);
+
+      const cached =
+        this.#itemCache.get(cacheKey) ??
+        this.createCachedItem(cacheKey, item, index);
+
+      cached.item = {
+        id,
+        index,
+        value: item,
+        controls: cached.controls,
+      };
+
+      return cached.item;
+    });
+
+    for (const [cacheKey, cached] of this.#itemCache) {
+      if (!activeCacheKeys.has(cacheKey)) {
+        cached.dispose();
+        this.#itemCache.delete(cacheKey);
+      }
+    }
+
+    return items;
+  }
+
+  push(value: TItem): void {
+    const previousItems = [...this.value];
+    this.#arrayApi.pushValue(value);
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  insert(index: number, value: TItem): void {
+    const previousItems = [...this.value];
+    this.#arrayApi.insertValue(index, value);
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  removeById(id: string): void {
+    const index = this.value.findIndex(
+      (item) => this.#config.getItemId(item) === id,
+    );
+
+    if (index === -1) {
+      return;
+    }
+
+    this.removeAt(index);
+  }
+
+  removeAt(index: number): void {
+    if (!isArrayIndexInBounds(this.value, index)) {
+      return;
+    }
+
+    const previousItems = [...this.value];
+    this.#arrayApi.removeValue(index);
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  move(fromIndex: number, toIndex: number): void {
+    if (
+      !isArrayIndexInBounds(this.value, fromIndex) ||
+      !isArrayIndexInBounds(this.value, toIndex) ||
+      fromIndex === toIndex
+    ) {
+      return;
+    }
+
+    const previousItems = [...this.value];
+    this.#arrayApi.moveValue(fromIndex, toIndex);
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  swap(leftIndex: number, rightIndex: number): void {
+    if (
+      !isArrayIndexInBounds(this.value, leftIndex) ||
+      !isArrayIndexInBounds(this.value, rightIndex) ||
+      leftIndex === rightIndex
+    ) {
+      return;
+    }
+
+    const previousItems = [...this.value];
+    this.#arrayApi.swapValues(leftIndex, rightIndex);
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  clear(): void {
+    if (this.value.length === 0) {
+      return;
+    }
+
+    const previousItems = [...this.value];
+    this.#arrayApi.clearValues();
+    this.#remapServerErrors(
+      this.#fieldName,
+      previousItems,
+      this.#config.getItemId,
+    );
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
+
+    for (const cached of this.#itemCache.values()) {
+      cached.dispose();
+    }
+
+    this.#itemCache.clear();
+    this.#stateBridge.dispose();
+    this.#arrayCleanup();
+  }
+
+  private createCachedItem(
+    cacheKey: string,
+    item: TItem,
+    index: number,
+  ): CachedArrayItem<TItem> {
+    const disposers: Array<() => void> = [];
+    const controls = this.createItemControls(item, index, disposers);
+    const cached: CachedArrayItem<TItem> = {
+      controls,
+      item: {
+        id: this.#config.getItemId(item),
+        index,
+        value: item,
+        controls,
+      },
+      dispose: () => {
+        for (const dispose of disposers) {
+          dispose();
+        }
+      },
+    };
+
+    this.#itemCache.set(cacheKey, cached);
+
+    return cached;
+  }
+
+  private createItemControls(
+    item: TItem,
+    index: number,
+    disposers: Array<() => void>,
+  ): ArrayItemControls<TItem> {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return {} as ArrayItemControls<TItem>;
+    }
+
+    const controls: Record<string, FormControl<unknown>> = {};
+
+    for (const key of Object.keys(item)) {
+      const fieldName = `${this.#fieldName}[${index}].${key}`;
+      const control = new MobxFormControl<unknown, TValues>({
+        fieldName,
+        formApi: this.#formApi,
+        clearServerError: this.#clearServerError,
+        getSubmissionAttempts: this.#getSubmissionAttempts,
+        rawFormApi: this.#rawFormApi,
+        config: {},
+      });
+
+      controls[key] = control;
+      disposers.push(() => {
+        control.dispose();
+      });
+    }
+
+    return controls as ArrayItemControls<TItem>;
+  }
+}
+
 function fieldConfigKeys<
   TValues extends object,
   TFields extends FieldConfigs<TValues>,
 >(value: TFields): Array<ControlName<TValues, TFields>> {
   return Object.keys(value) as Array<ControlName<TValues, TFields>>;
+}
+
+function arrayConfigKeys<
+  TValues extends object,
+  TArrays extends ArrayFieldConfigs<TValues>,
+>(value: TArrays): Array<ArrayName<TValues, TArrays>> {
+  return Object.keys(value) as Array<ArrayName<TValues, TArrays>>;
 }
 
 function adaptFieldValidators<TValue, TValues extends object>(
@@ -759,7 +1234,7 @@ function normalizeFormValidationResult<TValues extends object>(
   | string
   | {
       readonly form?: string;
-      readonly fields: Partial<Record<StringKeyOf<TValues>, string>>;
+      readonly fields: Partial<Record<FieldPath<TValues>, string>>;
     }
   | undefined {
   if (result === null || result === undefined) {
@@ -771,7 +1246,7 @@ function normalizeFormValidationResult<TValues extends object>(
       Object.entries(result.fields ?? {}).filter(
         ([, error]) => error !== undefined && error !== null && error !== '',
       ),
-    ) as Partial<Record<StringKeyOf<TValues>, string>>;
+    ) as Partial<Record<FieldPath<TValues>, string>>;
     const form =
       result.form === undefined || result.form === '' ? undefined : result.form;
 
@@ -817,6 +1292,14 @@ function selectControlSnapshot<TValue>(
   };
 }
 
+function selectArraySnapshot<TItem>(
+  state: TanStackFieldState<TItem[]>,
+): ArraySnapshot<TItem> {
+  return {
+    value: Array.isArray(state.value) ? state.value : [],
+  };
+}
+
 function areFormSnapshotsEqual(
   previous: FormSnapshot,
   next: FormSnapshot,
@@ -845,6 +1328,13 @@ function areControlSnapshotsEqual<TValue>(
   );
 }
 
+function areArraySnapshotsEqual<TItem>(
+  previous: ArraySnapshot<TItem>,
+  next: ArraySnapshot<TItem>,
+): boolean {
+  return Object.is(previous.value, next.value);
+}
+
 function areStringArraysEqual(
   previous: readonly string[],
   next: readonly string[],
@@ -854,4 +1344,15 @@ function areStringArraysEqual(
   }
 
   return previous.every((value, index) => value === next[index]);
+}
+
+function createArrayItemCacheKey(id: string, index: number): string {
+  return `${id}:${index}`;
+}
+
+function isArrayIndexInBounds(
+  value: readonly unknown[],
+  index: number,
+): boolean {
+  return Number.isInteger(index) && index >= 0 && index < value.length;
 }

@@ -120,14 +120,14 @@ Exit criteria:
 
 ## PR 6 - Nested Paths And Arrays
 
-- [ ] Add nested object path helpers.
-- [ ] Support nested control paths.
-- [ ] Implement `arrayField`.
-- [ ] Implement array item model with `{ id, index, controls, value }`.
-- [ ] Implement `push`, `insert`, `removeById`, `removeAt`, `move`, `swap`,
+- [x] Add nested object path helpers.
+- [x] Support nested control paths.
+- [x] Implement `arrayField`.
+- [x] Implement array item model with `{ id, index, controls, value }`.
+- [x] Implement `push`, `insert`, `removeById`, `removeAt`, `move`, `swap`,
       `clear`.
-- [ ] Preserve stable public ids through index changes.
-- [ ] Add tests for nested object path and stable array item ids.
+- [x] Preserve stable public ids through index changes.
+- [x] Add tests for nested object path and stable array item ids.
 
 Exit criteria:
 

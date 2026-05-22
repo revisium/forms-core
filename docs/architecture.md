@@ -107,6 +107,8 @@ form.controls.email.isTouched;
 form.controls.email.setValue('user@example.com');
 form.controls.email.blur();
 
+form.controls['profile.name'].value;
+
 form.arrays.members.items;
 form.arrays.members.push({ id: '2', name: '' });
 form.arrays.members.removeById('2');
@@ -138,6 +140,11 @@ Responsibilities:
 ## Control Wrapper
 
 Each control owns or references a TanStack `FieldApi` for its path.
+
+Nested controls use TanStack dot/bracket paths as public keys, for example
+`form.controls['profile.name']` or `form.controls['members[0].name']`. Top-level
+paths remain available through normal property access, such as
+`form.controls.email`.
 
 Responsibilities:
 

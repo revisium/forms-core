@@ -1,3 +1,7 @@
+import type { DeepKeys } from '@tanstack/form-core';
+
+type FieldPath<TValues extends object> = Extract<DeepKeys<TValues>, string>;
+
 export type FieldValidationResult = string | null | undefined | void;
 
 export type FieldValidatorContext<TValue, TValues extends object = object> = {
@@ -24,11 +28,11 @@ export type FieldValidators<TValue, TValues extends object = object> = {
   readonly onChange?: FieldValidator<TValue, TValues>;
   readonly onChangeAsync?: FieldAsyncValidator<TValue, TValues>;
   readonly onChangeAsyncDebounceMs?: number;
-  readonly onChangeListenTo?: readonly Extract<keyof TValues, string>[];
+  readonly onChangeListenTo?: readonly FieldPath<TValues>[];
   readonly onBlur?: FieldValidator<TValue, TValues>;
   readonly onBlurAsync?: FieldAsyncValidator<TValue, TValues>;
   readonly onBlurAsyncDebounceMs?: number;
-  readonly onBlurListenTo?: readonly Extract<keyof TValues, string>[];
+  readonly onBlurListenTo?: readonly FieldPath<TValues>[];
   readonly onSubmit?: FieldValidator<TValue, TValues>;
   readonly onSubmitAsync?: FieldAsyncValidator<TValue, TValues>;
 };
