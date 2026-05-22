@@ -67,6 +67,16 @@ Before staging, committing, pushing, or creating a PR:
 npm run verify
 ```
 
+When Sonar is configured and a PR exists, run or inspect both:
+
+```bash
+npm run ci:local:sonar
+npm run sonar:issues:local
+```
+
+Do not treat a passing Sonar Quality Gate as sufficient. The unresolved valid
+Sonar issue count must be `0`.
+
 For the docs-only bootstrap before package scripts exist:
 
 ```bash

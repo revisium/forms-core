@@ -44,6 +44,7 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --silent --passWithNoTests",
     "sonar:local": "bash scripts/sonar-local.sh",
+    "sonar:issues:local": "bash scripts/sonar-issues-local.sh",
     "ci:local:sonar": "bash scripts/ci-local-sonar.sh",
     "lint:ci": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",

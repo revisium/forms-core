@@ -44,7 +44,10 @@ description when requested, or PR comment.
 6. Check behavior touched by the PR: validation, server errors, arrays, patches,
    reset, submit, disposal, or typing.
 7. Confirm required validation ran.
-8. Confirm README structure and examples when README changed.
+8. Confirm Sonar Quality Gate and unresolved issue inspection when Sonar is
+   configured. Passing gate alone is not sufficient; valid unresolved issues
+   must be `0`.
+9. Confirm README structure and examples when README changed.
 
 ## Output Format
 

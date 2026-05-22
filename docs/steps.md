@@ -49,6 +49,7 @@ Exit criteria:
 - [x] Add initial CI workflow once `npm run verify` exists.
 - [x] Add Sonar scan wiring and project configuration.
 - [x] Add local Sonar scripts and bootstrap docs.
+- [x] Add zero-tolerance Sonar issue inspection.
 - [x] Add package publish metadata without publishing.
 
 Allowed dependencies:

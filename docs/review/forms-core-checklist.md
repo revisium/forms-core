@@ -67,8 +67,9 @@ sections that match their scope.
 - [ ] `npm run verify` passes after scaffold exists.
 - [ ] `git diff --check` passes.
 - [ ] Markdown and skill checks pass after scaffold exists.
-- [ ] Sonar or quality-gate failures are inspected from the actual check when
-      configured.
+- [ ] Sonar Quality Gate status is inspected when configured.
+- [ ] Sonar unresolved issues are inspected, and the remaining valid issue count
+      is `0`.
 - [ ] Package contents are checked before release.
 
 ## README

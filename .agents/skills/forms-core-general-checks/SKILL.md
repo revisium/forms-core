@@ -62,8 +62,10 @@ npm pack --dry-run
 ```
 
 For PR updates, inspect required PR checks and Sonar/quality-gate status when
-configured. Do not call a branch ready while required checks are failed or
-pending.
+configured. Sonar `PASSED` is not enough: inspect unresolved Sonar issues with
+`npm run sonar:issues:local` or the linked Sonar issue list, and require `0`
+remaining valid issues. Do not call a branch ready while required checks are
+failed, pending, or hiding unresolved valid Sonar issues.
 
 ## Output Format
 

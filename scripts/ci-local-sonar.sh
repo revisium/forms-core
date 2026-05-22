@@ -7,3 +7,4 @@ cd "$ROOT_DIR"
 rm -rf coverage
 npm run verify
 npm run sonar:local
+npm run sonar:issues:local

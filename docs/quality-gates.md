@@ -32,6 +32,7 @@ The package scaffold provides these scripts:
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --silent --passWithNoTests",
     "sonar:local": "bash scripts/sonar-local.sh",
+    "sonar:issues:local": "bash scripts/sonar-issues-local.sh",
     "ci:local:sonar": "bash scripts/ci-local-sonar.sh",
     "lint:ci": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
@@ -75,8 +76,9 @@ npm run ci:local:sonar
 ```
 
 `npm run ci:local:sonar` removes stale coverage, runs `npm run verify`, and then
-runs `npm run sonar:local`. `npm run sonar:local` requires `coverage/lcov.info`
-and fails fast if coverage is missing. Keep `.env.sonar` untracked.
+runs `npm run sonar:local` and `npm run sonar:issues:local`.
+`npm run sonar:local` requires `coverage/lcov.info` and fails fast if coverage
+is missing. Keep `.env.sonar` untracked.
 
 Run local Sonar after the branch has a GitHub PR whenever possible. The script
 uses `gh pr view` to send PR analysis parameters:
@@ -93,6 +95,19 @@ For manual PR analysis, set:
 SONAR_PR_KEY=123 SONAR_PR_BRANCH=my-branch SONAR_PR_BASE=master npm run sonar:local
 ```
 
+Quality Gate `PASSED` is necessary but not sufficient. Every PR must inspect
+the unresolved Sonar issue list:
+
+```bash
+npm run sonar:issues:local
+```
+
+The accepted unresolved issue count is `0`. Fix every valid issue, including
+minor maintainability issues. If an issue is a false positive, document the
+rule, file, line, message, and evidence, then use the narrowest accepted
+suppression only when this repository permits it. Do not report Sonar as done
+unless both the Quality Gate and unresolved issue inspection pass.
+
 When Sonar is configured, resolve the project key in this order:
 
 1. `.sonarlint/connectedMode.json`;
@@ -103,9 +118,9 @@ When Sonar is configured, resolve the project key in this order:
 
 Do not guess the project key.
 
-For a Sonar failure:
+For a Sonar failure or non-zero issue count:
 
-1. Inspect the linked quality gate or issue list.
+1. Inspect the linked quality gate and issue list.
 2. Record rule, file, line, and message.
 3. Fix the underlying issue when valid.
 4. If false positive, document evidence and use the narrowest allowed

@@ -52,6 +52,7 @@ Useful local commands:
 - `npm run lint:ci` - ESLint with zero warnings.
 - `npm run test:cov` - Jest coverage output for Sonar.
 - `npm run sonar:local` - run Sonar locally from existing coverage.
+- `npm run sonar:issues:local` - fail on unresolved Sonar issues.
 - `npm run ci:local:sonar` - run local verify and then Sonar quality gate.
 - `npm run build` - package build and declaration output.
 - `npm run markdown:lint` - Markdown and agent-rule lint.
@@ -62,6 +63,9 @@ untracked `.env.sonar` from `.env.sonar.example`. Do not commit real Sonar
 tokens. Prefer running local Sonar after the branch has a GitHub PR: the script
 auto-detects the PR and runs PR analysis. Before a PR exists, Sonar falls back
 to branch analysis, which may be blocked by the organization plan.
+
+Do not treat Sonar `PASSED` as complete by itself. Inspect unresolved issues and
+fix every valid issue; this repo uses zero tolerance for Sonar issues.
 
 ## Bootstrap Pattern
 
