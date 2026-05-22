@@ -78,7 +78,7 @@ Do not treat a passing Sonar Quality Gate as sufficient. The unresolved valid
 PR Sonar issue count must be `0`. This is a PR gate; branch pushes should remain
 scan-only for Sonar.
 
-For the docs-only bootstrap before package scripts exist:
+For docs-only changes before package scripts exist:
 
 ```bash
 git diff --check

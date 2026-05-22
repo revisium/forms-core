@@ -6,7 +6,7 @@ release workflow, review policy, and reusable handoff guidance.
 ## Reading Order
 
 1. [Architecture](./architecture.md)
-2. [PR Plan](./pr-plan.md)
+2. [Reactivity Matrix](./reactivity-matrix.md)
 3. [Quality Gates](./quality-gates.md)
 4. [README Guidelines](./readme-guidelines.md)
 5. [Known Limitations](./limitations.md)
@@ -17,7 +17,8 @@ release workflow, review policy, and reusable handoff guidance.
 ## Source-Of-Truth Rules
 
 - Public API and behavior belong in `architecture.md`.
-- PR history and future maintenance boundaries belong in `pr-plan.md`.
+- MobX reaction coverage and no-extra-reaction expectations belong in
+  `reactivity-matrix.md`.
 - Validation, CI, Sonar, and package checks belong in `quality-gates.md`.
 - Public package README shape belongs in `readme-guidelines.md`.
 - Release and npm publish rules belong in `release-train.md`.

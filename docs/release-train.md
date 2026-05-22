@@ -12,6 +12,9 @@ workflow.
 - Publish only after explicit user approval.
 - Do not publish from an unverified branch.
 - Do not publish from `master` directly.
+- A one-time local alpha publish from a verified `master` checkout is allowed
+  only when the user explicitly requests it to initialize npm package access.
+  Subsequent publishes should use `revisium-actions`.
 - Do not create tags manually unless the release workflow requires it and the
   user approves.
 - Verify package contents before publish.

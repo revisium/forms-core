@@ -1,4 +1,5 @@
 import { FieldApi, FormApi } from '@tanstack/form-core';
+import { observable, runInAction, untracked } from 'mobx';
 
 import type {
   DeepKeys,
@@ -11,6 +12,7 @@ import type {
   FormValidateOrFn,
   ValidationCause,
 } from '@tanstack/form-core';
+import type { IObservableValue } from 'mobx';
 
 import type { ArrayFieldConfig } from './array-field.js';
 import type { FieldConfig, FieldValidators } from './field.js';
@@ -430,11 +432,16 @@ type ControlSnapshot<TValue> = {
 
 type ArraySnapshot<TItem> = {
   readonly value: readonly TItem[];
+  readonly signatures: readonly string[];
 };
 
 type CachedArrayItem<TItem> = {
-  item: FormArrayItem<TItem>;
+  readonly item: FormArrayItem<TItem>;
   readonly controls: ArrayItemControls<TItem>;
+  readonly index: IObservableValue<number>;
+  lastValue: TItem;
+  disposed: boolean;
+  retarget(index: number): void;
   dispose(): void;
 };
 
@@ -955,7 +962,9 @@ class MobxFormArray<TItem, TValues extends object>
 
   readonly #rawFormApi: RawTanStackFormApi<TValues>;
 
-  readonly #stateBridge: MobxSelectorBridge<ArraySnapshot<TItem>>;
+  readonly #valueBridge: MobxSelectorBridge<ArraySnapshot<TItem>>;
+
+  readonly #structureBridge: MobxSelectorBridge<ArraySnapshot<TItem>>;
 
   readonly #itemCache = new Map<string, CachedArrayItem<TItem>>();
 
@@ -990,38 +999,54 @@ class MobxFormArray<TItem, TValues extends object>
 
     this.#arrayApi = fieldApi as unknown as TanStackArrayFieldApi<TItem>;
     this.#arrayCleanup = this.#arrayApi.mount();
-    this.#stateBridge = createMobxSelectorBridge(
+    this.#valueBridge = createMobxSelectorBridge(
       this.#arrayApi.store,
-      selectArraySnapshot,
-      { equals: areArraySnapshotsEqual },
+      (state) =>
+        selectArraySnapshot(state, (item) =>
+          createArrayItemValueSignature(item, this.#config.getItemId),
+        ),
+      {
+        equals: (previous, next) => areArraySnapshotsEqual(previous, next),
+      },
+    );
+    this.#structureBridge = createMobxSelectorBridge(
+      this.#arrayApi.store,
+      (state) =>
+        selectArraySnapshot(state, (item) =>
+          createArrayItemIdSignature(item, this.#config.getItemId),
+        ),
+      {
+        equals: (previous, next) => areArraySnapshotsEqual(previous, next),
+      },
     );
   }
 
   get value(): readonly TItem[] {
-    const value = this.#stateBridge.value.value;
+    const value = this.#valueBridge.value.value;
     assertUniqueArrayItemIds(this.#fieldName, value, this.#config.getItemId);
 
     return value;
   }
 
   get items(): readonly FormArrayItem<TItem>[] {
-    const value = this.value;
+    const value = this.#structureBridge.value.value;
+    assertUniqueArrayItemIds(this.#fieldName, value, this.#config.getItemId);
+
     const activeCacheKeys = new Set<string>();
     const items = value.map((item, index) => {
       const id = this.#config.getItemId(item);
-      const cacheKey = createArrayItemCacheKey(id, index);
+      const cacheKey = createArrayItemCacheKey(id);
       activeCacheKeys.add(cacheKey);
 
       const cached =
         this.#itemCache.get(cacheKey) ??
         this.createCachedItem(cacheKey, item, index);
 
-      cached.item = {
-        id,
-        index,
-        value: item,
-        controls: cached.controls,
-      };
+      if (untracked(() => cached.index.get()) !== index) {
+        cached.retarget(index);
+      }
+
+      cached.lastValue = item;
 
       return cached.item;
     });
@@ -1048,6 +1073,7 @@ class MobxFormArray<TItem, TValues extends object>
       this.#config.getItemId,
     );
     this.#arrayApi.pushValue(value);
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1069,6 +1095,7 @@ class MobxFormArray<TItem, TValues extends object>
       this.#config.getItemId,
     );
     this.#arrayApi.insertValue(index, value);
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1103,6 +1130,7 @@ class MobxFormArray<TItem, TValues extends object>
 
     const previousItems = [...this.value];
     this.#arrayApi.removeValue(index);
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1125,6 +1153,7 @@ class MobxFormArray<TItem, TValues extends object>
 
     const previousItems = [...this.value];
     this.#arrayApi.moveValue(fromIndex, toIndex);
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1147,6 +1176,7 @@ class MobxFormArray<TItem, TValues extends object>
 
     const previousItems = [...this.value];
     this.#arrayApi.swapValues(leftIndex, rightIndex);
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1165,6 +1195,7 @@ class MobxFormArray<TItem, TValues extends object>
 
     const previousItems = [...this.value];
     this.#arrayApi.clearValues();
+    this.refreshCachedItemControls();
     this.#remapServerErrors(
       this.#fieldName,
       previousItems,
@@ -1184,7 +1215,8 @@ class MobxFormArray<TItem, TValues extends object>
     }
 
     this.#itemCache.clear();
-    this.#stateBridge.dispose();
+    this.#valueBridge.dispose();
+    this.#structureBridge.dispose();
     this.#arrayCleanup();
   }
 
@@ -1195,15 +1227,27 @@ class MobxFormArray<TItem, TValues extends object>
   ): CachedArrayItem<TItem> {
     const disposers: Array<() => void> = [];
     const controls = this.createItemControls(item, index, disposers);
+    const id = this.#config.getItemId(item);
     const cached: CachedArrayItem<TItem> = {
       controls,
-      item: {
-        id: this.#config.getItemId(item),
-        index,
-        value: item,
-        controls,
+      index: observable.box(index, { deep: false }),
+      lastValue: item,
+      disposed: false,
+      item: this.createPublicItem(id, controls, () => cached),
+      retarget: (nextIndex) => {
+        runInAction(() => {
+          cached.index.set(nextIndex);
+        });
+
+        for (const control of Object.values(controls)) {
+          if (isRetargetableFormControl(control)) {
+            control.retarget(nextIndex);
+          }
+        }
       },
       dispose: () => {
+        cached.disposed = true;
+
         for (const dispose of disposers) {
           dispose();
         }
@@ -1213,6 +1257,58 @@ class MobxFormArray<TItem, TValues extends object>
     this.#itemCache.set(cacheKey, cached);
 
     return cached;
+  }
+
+  private createPublicItem(
+    id: string,
+    controls: ArrayItemControls<TItem>,
+    getCached: () => CachedArrayItem<TItem>,
+  ): FormArrayItem<TItem> {
+    const getCurrentValue = (index: number) =>
+      this.#valueBridge.value.value[index];
+
+    return {
+      get id() {
+        return id;
+      },
+      get index() {
+        return getCached().index.get();
+      },
+      get value() {
+        const cached = getCached();
+
+        if (cached.disposed) {
+          return cached.lastValue;
+        }
+
+        return getCurrentValue(cached.index.get()) ?? cached.lastValue;
+      },
+      controls,
+    };
+  }
+
+  private refreshCachedItemControls(): void {
+    const activeCacheKeys = new Set<string>();
+
+    this.#structureBridge.value.value.forEach((item, index) => {
+      const cacheKey = createArrayItemCacheKey(this.#config.getItemId(item));
+      const cached = this.#itemCache.get(cacheKey);
+      activeCacheKeys.add(cacheKey);
+
+      if (
+        cached !== undefined &&
+        untracked(() => cached.index.get()) !== index
+      ) {
+        cached.retarget(index);
+      }
+    });
+
+    for (const [cacheKey, cached] of this.#itemCache) {
+      if (!activeCacheKeys.has(cacheKey)) {
+        cached.dispose();
+        this.#itemCache.delete(cacheKey);
+      }
+    }
   }
 
   private createItemControls(
@@ -1228,13 +1324,18 @@ class MobxFormArray<TItem, TValues extends object>
 
     for (const key of Object.keys(item)) {
       const fieldName = `${this.#fieldName}[${index}].${key}`;
-      const control = new MobxFormControl<unknown, TValues>({
+      const control = new RetargetableFormControl<unknown>({
+        createControl: (nextFieldName) =>
+          new MobxFormControl<unknown, TValues>({
+            fieldName: nextFieldName,
+            formApi: this.#formApi,
+            clearServerError: this.#clearServerError,
+            getSubmissionAttempts: this.#getSubmissionAttempts,
+            rawFormApi: this.#rawFormApi,
+            config: {},
+          }),
         fieldName,
-        formApi: this.#formApi,
-        clearServerError: this.#clearServerError,
-        getSubmissionAttempts: this.#getSubmissionAttempts,
-        rawFormApi: this.#rawFormApi,
-        config: {},
+        getFieldName: (nextIndex) => `${this.#fieldName}[${nextIndex}].${key}`,
       });
 
       controls[key] = control;
@@ -1244,6 +1345,109 @@ class MobxFormArray<TItem, TValues extends object>
     }
 
     return controls as ArrayItemControls<TItem>;
+  }
+}
+
+class RetargetableFormControl<TValue>
+  implements FormControl<TValue>, InternalControl
+{
+  readonly #controlBox: IObservableValue<FormControl<TValue> & InternalControl>;
+
+  readonly #createControl: (
+    fieldName: string,
+  ) => FormControl<TValue> & InternalControl;
+
+  readonly #getFieldName: (index: number) => string;
+
+  #disposed = false;
+
+  constructor(options: {
+    readonly createControl: (
+      fieldName: string,
+    ) => FormControl<TValue> & InternalControl;
+    readonly fieldName: string;
+    readonly getFieldName: (index: number) => string;
+  }) {
+    this.#createControl = options.createControl;
+    this.#getFieldName = options.getFieldName;
+    this.#controlBox = observable.box(this.#createControl(options.fieldName), {
+      deep: false,
+    });
+  }
+
+  get value(): TValue {
+    return this.#controlBox.get().value;
+  }
+
+  get displayValue(): TValue {
+    return this.#controlBox.get().displayValue;
+  }
+
+  get error(): PublicFieldError {
+    return this.#controlBox.get().error;
+  }
+
+  get visibleError(): PublicFieldError {
+    return this.#controlBox.get().visibleError;
+  }
+
+  get isDirty(): boolean {
+    return this.#controlBox.get().isDirty;
+  }
+
+  get isTouched(): boolean {
+    return this.#controlBox.get().isTouched;
+  }
+
+  get isValidating(): boolean {
+    return this.#controlBox.get().isValidating;
+  }
+
+  setValue(value: TValue): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#controlBox.get().setValue(value);
+  }
+
+  blur(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#controlBox.get().blur();
+  }
+
+  reset(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#controlBox.get().reset();
+  }
+
+  retarget(index: number): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const previousControl = this.#controlBox.get();
+    const nextControl = this.#createControl(this.#getFieldName(index));
+
+    runInAction(() => {
+      this.#controlBox.set(nextControl);
+    });
+    previousControl.dispose();
+  }
+
+  dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
+    this.#controlBox.get().dispose();
   }
 }
 
@@ -1454,9 +1658,13 @@ function selectControlSnapshot<TValue>(
 
 function selectArraySnapshot<TItem>(
   state: TanStackFieldState<TItem[]>,
+  createSignature: (item: TItem) => string,
 ): ArraySnapshot<TItem> {
+  const value = Array.isArray(state.value) ? [...state.value] : [];
+
   return {
-    value: Array.isArray(state.value) ? state.value : [],
+    value,
+    signatures: value.map(createSignature),
   };
 }
 
@@ -1492,7 +1700,17 @@ function areArraySnapshotsEqual<TItem>(
   previous: ArraySnapshot<TItem>,
   next: ArraySnapshot<TItem>,
 ): boolean {
-  return Object.is(previous.value, next.value);
+  if (Object.is(previous.value, next.value)) {
+    return true;
+  }
+
+  if (previous.signatures.length !== next.signatures.length) {
+    return false;
+  }
+
+  return previous.signatures.every(
+    (signature, index) => signature === next.signatures[index],
+  );
 }
 
 function areStringArraysEqual(
@@ -1901,8 +2119,109 @@ function unsubscribeStoreSubscription(subscription: StoreSubscription): void {
 
 function noop(): void {}
 
-function createArrayItemCacheKey(id: string, index: number): string {
-  return `${id}:${index}`;
+function createArrayItemIdSignature<TItem>(
+  item: TItem,
+  getItemId: (item: TItem) => string,
+): string {
+  return getItemId(item);
+}
+
+function createArrayItemValueSignature<TItem>(
+  item: TItem,
+  getItemId: (item: TItem) => string,
+): string {
+  return `${getItemId(item)}:${stableFormValueSignature(item)}`;
+}
+
+function stableFormValueSignature(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (typeof value === 'bigint') {
+    return `bigint:${value.toString()}`;
+  }
+
+  if (typeof value === 'number') {
+    return stableNumberValueSignature(value);
+  }
+
+  if (typeof value === 'boolean') {
+    return `boolean:${value}`;
+  }
+
+  if (typeof value === 'string') {
+    return `string:${JSON.stringify(value)}`;
+  }
+
+  if (typeof value === 'symbol') {
+    return `symbol:${JSON.stringify(value.description)}`;
+  }
+
+  if (typeof value === 'function') {
+    return `function:${JSON.stringify(value.name)}`;
+  }
+
+  if (Array.isArray(value)) {
+    return stableArrayValueSignature(value);
+  }
+
+  if (isPlainRecord(value)) {
+    return stablePlainRecordValueSignature(value);
+  }
+
+  return `object:${Object.prototype.toString.call(value)}`;
+}
+
+function stableNumberValueSignature(value: number): string {
+  if (Number.isNaN(value)) {
+    return 'number:NaN';
+  }
+
+  if (value === Infinity) {
+    return 'number:Infinity';
+  }
+
+  if (value === -Infinity) {
+    return 'number:-Infinity';
+  }
+
+  if (Object.is(value, -0)) {
+    return 'number:-0';
+  }
+
+  return `number:${value}`;
+}
+
+function stableArrayValueSignature(value: readonly unknown[]): string {
+  return `array:${value.length}:[${value
+    .map((item, index) => `${index}:${stableFormValueSignature(item)}`)
+    .join(',')}]`;
+}
+
+function stablePlainRecordValueSignature(
+  value: Record<string, unknown>,
+): string {
+  return `object:{${Object.keys(value)
+    .sort((left, right) => left.localeCompare(right))
+    .map(
+      (key) => `${JSON.stringify(key)}:${stableFormValueSignature(value[key])}`,
+    )
+    .join(',')}}`;
+}
+
+function isRetargetableFormControl<TValue>(
+  control: FormControl<TValue>,
+): control is RetargetableFormControl<TValue> {
+  return control instanceof RetargetableFormControl;
+}
+
+function createArrayItemCacheKey(id: string): string {
+  return id;
 }
 
 function assertUniqueArrayItemIds<TItem>(

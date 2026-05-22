@@ -155,7 +155,7 @@ Avoid coverage padding with method-existence tests.
 
 ## Package Checks
 
-Before release readiness:
+Before release or publish handoff:
 
 ```bash
 npm pack --dry-run
