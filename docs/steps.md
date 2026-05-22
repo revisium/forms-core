@@ -65,14 +65,14 @@ Exit criteria:
 
 ## PR 3 - Private MobX Selector Bridge
 
-- [ ] Implement internal bridge over `{ get, subscribe }`.
-- [ ] Use `observable.box(..., { deep: false })`.
-- [ ] Update selected value inside `runInAction`.
-- [ ] Support custom equality comparator.
-- [ ] Support unsubscribe object and unsubscribe function shapes.
-- [ ] Expose `value` and `dispose()` internally.
-- [ ] Keep bridge out of public exports.
-- [ ] Add unit tests for reaction updates and disposal unsubscribe.
+- [x] Implement internal bridge over `{ get, subscribe }`.
+- [x] Use `observable.box(..., { deep: false })`.
+- [x] Update selected value inside `runInAction`.
+- [x] Support custom equality comparator.
+- [x] Support unsubscribe object and unsubscribe function shapes.
+- [x] Expose `value` and `dispose()` internally.
+- [x] Keep bridge out of public exports.
+- [x] Add unit tests for reaction updates and disposal unsubscribe.
 
 Exit criteria:
 

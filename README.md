@@ -64,8 +64,10 @@ tokens. Prefer running local Sonar after the branch has a GitHub PR: the script
 auto-detects the PR and runs PR analysis. Before a PR exists, Sonar falls back
 to branch analysis, which may be blocked by the organization plan.
 
-Do not treat Sonar `PASSED` as complete by itself. Inspect unresolved issues and
-fix every valid issue; this repo uses zero tolerance for Sonar issues.
+For PRs, do not treat Sonar `PASSED` as complete by itself. Inspect unresolved
+issues and fix every valid issue; this repo uses zero tolerance for PR Sonar
+issues. Pushes to `master` upload Sonar analysis but do not enforce total branch
+issue count.
 
 ## Bootstrap Pattern
 

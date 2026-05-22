@@ -45,8 +45,9 @@ description when requested, or PR comment.
    reset, submit, disposal, or typing.
 7. Confirm required validation ran.
 8. Confirm Sonar Quality Gate and unresolved issue inspection when Sonar is
-   configured. Passing gate alone is not sufficient; valid unresolved issues
-   must be `0`.
+   configured on a PR. Passing gate alone is not sufficient; valid unresolved PR
+   issues must be `0`. Do not require branch push builds to enforce the total
+   branch issue count.
 9. Confirm README structure and examples when README changed.
 
 ## Output Format

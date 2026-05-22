@@ -83,5 +83,7 @@ When copying this pattern:
    environment or an untracked `.env.sonar`, and should prefer PR analysis over
    branch analysis when the SonarCloud organization blocks non-main branch
    gates.
-9. Require Sonar issue inspection in addition to Quality Gate status. The
-   unresolved valid issue count must be `0`.
+9. Require Sonar issue inspection in addition to Quality Gate status for PRs.
+   The unresolved valid PR issue count must be `0`. Keep master/release branch
+   push builds as scan-only so existing branch-level issue totals do not block
+   the branch after merge.

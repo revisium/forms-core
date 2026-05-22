@@ -38,7 +38,7 @@
   ],
   "scripts": {
     "build": "tsdown && npm run build:dts",
-    "build:dts": "tsc --emitDeclarationOnly --outDir dist --declaration --declarationMap",
+    "build:dts": "tsc -p tsconfig.build.json --emitDeclarationOnly --outDir dist --declaration --declarationMap",
     "dev": "tsdown --watch",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",

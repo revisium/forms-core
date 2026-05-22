@@ -73,10 +73,13 @@ npm run verify
 The planned `verify` script should run TypeScript, lint, unit tests, build, and
 Markdown/skill checks.
 
-Sonar has zero-tolerance semantics in this repo. A passing Quality Gate is not
-enough by itself: always inspect unresolved Sonar issues for the PR or branch.
-Fix every valid issue. If an issue is a false positive, document the evidence
-and use the narrowest allowed suppression only when the repo permits it.
+Sonar has zero-tolerance semantics for pull requests in this repo. A passing PR
+Quality Gate is not enough by itself: always inspect unresolved Sonar issues for
+the PR and fix every valid issue. CI push builds on `master` and release
+branches should upload Sonar analysis without blocking on total branch issue
+count; PR checks enforce the `0` unresolved-valid-issues rule. If an issue is a
+false positive, document the evidence and use the narrowest allowed suppression
+only when the repo permits it.
 
 ## Handoff
 
