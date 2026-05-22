@@ -15,6 +15,7 @@ describe('error normalization', () => {
     expect(normalizeFirstError({ message: 'Message property' })).toBe(
       'Message property',
     );
+    expect(normalizeFirstError({ code: 'invalid' })).toBe('{"code":"invalid"}');
     expect(normalizeFirstError(404)).toBe('404');
   });
 

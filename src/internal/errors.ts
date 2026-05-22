@@ -1,5 +1,4 @@
 export type PublicFieldError = string | undefined;
-export type PublicFormError = string;
 
 export function normalizeFirstError(value: unknown): PublicFieldError {
   if (Array.isArray(value)) {
@@ -30,17 +29,21 @@ export function normalizeFirstError(value: unknown): PublicFieldError {
     return value.message;
   }
 
+  if (typeof value === 'object') {
+    return stringifyObjectError(value);
+  }
+
   return String(value);
 }
 
-export function normalizeErrors(value: unknown): readonly PublicFormError[] {
+export function normalizeErrors(value: unknown): readonly string[] {
   if (!Array.isArray(value)) {
     const normalized = normalizeFirstError(value);
 
     return normalized === undefined ? [] : [normalized];
   }
 
-  const errors: PublicFormError[] = [];
+  const errors: string[] = [];
 
   for (const item of value) {
     const normalized = normalizeFirstError(item);
@@ -60,4 +63,12 @@ function hasMessage(value: unknown): value is { readonly message: string } {
     'message' in value &&
     typeof value.message === 'string'
   );
+}
+
+function stringifyObjectError(value: object): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return Object.prototype.toString.call(value);
+  }
 }

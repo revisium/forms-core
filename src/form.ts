@@ -7,7 +7,6 @@ import {
   normalizeErrors,
   normalizeFirstError,
   type PublicFieldError,
-  type PublicFormError,
 } from './internal/errors.js';
 import {
   createMobxSelectorBridge,
@@ -65,11 +64,11 @@ export type FormsCoreForm<
   readonly isDirty: boolean;
   readonly isTouched: boolean;
   readonly isSubmitting: boolean;
-  readonly errors: readonly PublicFormError[];
+  readonly errors: readonly string[];
   getRawValue(): TValues;
   reset(values?: TValues): void;
   submit(): Promise<void>;
-  validate(): Promise<readonly PublicFormError[]>;
+  validate(): Promise<readonly string[]>;
   dispose(): void;
 };
 
@@ -90,7 +89,7 @@ type TanStackFormApi<TValues extends object> = {
   reset: (values?: TValues) => void;
   resetField: (field: string) => void;
   handleSubmit: () => Promise<void>;
-  validate: (cause: ValidationCause) => unknown | Promise<unknown>;
+  validate: (cause: ValidationCause) => unknown;
   validateAllFields: (cause: ValidationCause) => Promise<unknown[]>;
 };
 
@@ -119,7 +118,7 @@ type FormSnapshot = {
   readonly isTouched: boolean;
   readonly isSubmitting: boolean;
   readonly submissionAttempts: number;
-  readonly errors: readonly PublicFormError[];
+  readonly errors: readonly string[];
 };
 
 type ControlSnapshot<TValue> = {
@@ -162,7 +161,7 @@ class MobxForm<
   constructor(options: CreateFormOptions<TValues, TFields>) {
     const rawFormApi = new FormApi({
       defaultValues: options.defaultValues,
-    } as never);
+    });
     this.#formApi = rawFormApi as unknown as TanStackFormApi<TValues>;
     this.#formCleanup = this.#formApi.mount();
     this.#stateBridge = createMobxSelectorBridge(
@@ -189,7 +188,7 @@ class MobxForm<
         config,
       });
 
-      controls[name] = control as FormControl<unknown>;
+      controls[name] = control;
       internalControls.push(control);
     }
 
@@ -213,7 +212,7 @@ class MobxForm<
     return this.#stateBridge.value.isSubmitting;
   }
 
-  get errors(): readonly PublicFormError[] {
+  get errors(): readonly string[] {
     return this.#stateBridge.value.errors;
   }
 
@@ -234,7 +233,7 @@ class MobxForm<
     await this.#formApi.handleSubmit();
   }
 
-  async validate(): Promise<readonly PublicFormError[]> {
+  async validate(): Promise<readonly string[]> {
     await Promise.all([
       this.#formApi.validateAllFields('submit'),
       Promise.resolve(this.#formApi.validate('submit')),
