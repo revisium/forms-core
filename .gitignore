@@ -4,6 +4,6 @@ coverage/
 .sonar/
 .DS_Store
 .env
-.env.local
-.env.sonar
+.env.*
+!.env*.example
 *.log
