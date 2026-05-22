@@ -14,14 +14,18 @@ Scope:
 - `.claude/skills` symlink
 - `REVIEW.md`
 - `docs/**`
+- `scripts/lint-skills.mjs`
 
-No source code, package scaffold, dependencies, or npm scripts.
+No package source code, package scaffold, dependencies, or npm scripts. PR 1 may
+include repo-local helper scripts that validate the agent contract, such as
+`scripts/lint-skills.mjs`.
 
 Validation:
 
 ```bash
 git status --short --branch
 git diff --check
+node scripts/lint-skills.mjs
 ```
 
 ## PR 2 - Package Scaffold
@@ -31,7 +35,7 @@ Scope:
 - package metadata;
 - TypeScript/build/test/lint config;
 - empty or minimal public entrypoint;
-- validation scripts.
+- validation scripts;
 - Markdown, skill, coverage, and package-check scripts described in
   [quality-gates.md](./quality-gates.md).
 - initial CI workflow if validation scripts are ready.

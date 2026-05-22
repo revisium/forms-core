@@ -129,7 +129,27 @@ function lintSkillFile(filePath, rawText) {
   }
 }
 
-const skillFiles = await findSkillFiles(SKILLS_DIR);
+let skillFiles = [];
+
+try {
+  skillFiles = await findSkillFiles(SKILLS_DIR);
+} catch (error) {
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    console.error(
+      `Skill lint failed: missing skills directory "${path.relative(process.cwd(), SKILLS_DIR)}".`,
+    );
+    process.exit(1);
+  }
+
+  throw error;
+}
+
+if (skillFiles.length === 0) {
+  console.error(
+    `Skill lint failed: no SKILL.md files found in "${path.relative(process.cwd(), SKILLS_DIR)}".`,
+  );
+  process.exit(1);
+}
 
 for (const skillFile of skillFiles) {
   lintSkillFile(skillFile, await readFile(skillFile, 'utf8'));
