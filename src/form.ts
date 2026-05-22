@@ -1,6 +1,12 @@
 import { FieldApi, FormApi } from '@tanstack/form-core';
 
-import type { ValidationCause } from '@tanstack/form-core';
+import type {
+  DeepKeys,
+  DeepValue,
+  FieldApiOptions,
+  FieldValidateOrFn,
+  ValidationCause,
+} from '@tanstack/form-core';
 
 import type { FieldConfig, FieldValidator, FieldValidators } from './field.js';
 import {
@@ -93,6 +99,21 @@ type TanStackFormApi<TValues extends object> = {
   validateAllFields: (cause: ValidationCause) => Promise<unknown[]>;
 };
 
+type RawTanStackFormApi<TValues extends object> = FormApi<
+  TValues,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  never
+>;
+
 type TanStackFieldMeta = {
   readonly errors: readonly unknown[];
   readonly isDirty: boolean;
@@ -111,6 +132,54 @@ type TanStackFieldApi<TValue> = {
   setValue: (updater: (previous: TValue) => TValue) => void;
   handleBlur: () => void;
 };
+
+type AdaptedFieldValidators<TValue> = Partial<
+  Record<
+    keyof FieldValidators<TValue>,
+    (context: { readonly value: TValue }) => unknown
+  >
+>;
+
+type AnyRawFieldName<TValues extends object> = DeepKeys<TValues>;
+
+type AnyRawFieldValue<TValues extends object> = DeepValue<
+  TValues,
+  AnyRawFieldName<TValues>
+>;
+
+type RawFieldValidate<TValues extends object> =
+  | FieldValidateOrFn<
+      TValues,
+      AnyRawFieldName<TValues>,
+      AnyRawFieldValue<TValues>
+    >
+  | undefined;
+
+type RawFieldApiOptions<TValues extends object> = FieldApiOptions<
+  TValues,
+  AnyRawFieldName<TValues>,
+  AnyRawFieldValue<TValues>,
+  undefined,
+  RawFieldValidate<TValues>,
+  undefined,
+  RawFieldValidate<TValues>,
+  undefined,
+  RawFieldValidate<TValues>,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  undefined,
+  never
+>;
 
 type FormSnapshot = {
   readonly isValid: boolean;
@@ -159,7 +228,20 @@ class MobxForm<
   #disposed = false;
 
   constructor(options: CreateFormOptions<TValues, TFields>) {
-    const rawFormApi = new FormApi({
+    const rawFormApi = new FormApi<
+      TValues,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      never
+    >({
       defaultValues: options.defaultValues,
     });
     this.#formApi = rawFormApi;
@@ -279,18 +361,20 @@ class MobxFormControl<TValue, TValues extends object>
     readonly fieldName: string;
     readonly formApi: TanStackFormApi<TValues>;
     readonly getSubmissionAttempts: () => number;
-    readonly rawFormApi: unknown;
+    readonly rawFormApi: RawTanStackFormApi<TValues>;
     readonly config: FieldConfig<TValue>;
   }) {
     this.#fieldName = options.fieldName;
     this.#formApi = options.formApi;
     this.#getSubmissionAttempts = options.getSubmissionAttempts;
 
-    const fieldApi = new FieldApi({
+    const fieldApiOptions = {
       form: options.rawFormApi,
       name: options.fieldName,
       validators: adaptFieldValidators(options.config.validators),
-    } as never);
+    } as unknown as RawFieldApiOptions<TValues>;
+
+    const fieldApi = new FieldApi(fieldApiOptions);
 
     this.#fieldApi = fieldApi as unknown as TanStackFieldApi<TValue>;
     this.#fieldCleanup = this.#fieldApi.mount();
@@ -369,17 +453,12 @@ function fieldConfigKeys<
 
 function adaptFieldValidators<TValue>(
   validators: FieldValidators<TValue> | undefined,
-):
-  | Record<string, (context: { readonly value: TValue }) => unknown>
-  | undefined {
+): AdaptedFieldValidators<TValue> | undefined {
   if (validators === undefined) {
     return undefined;
   }
 
-  const adapted: Record<
-    string,
-    (context: { readonly value: TValue }) => unknown
-  > = {};
+  const adapted: AdaptedFieldValidators<TValue> = {};
 
   addFieldValidator(adapted, 'onChange', validators.onChange);
   addFieldValidator(adapted, 'onBlur', validators.onBlur);
