@@ -715,7 +715,7 @@ class MobxForm<
       return;
     }
 
-    for (const listener of [...this.#patchListeners]) {
+    for (const listener of this.#patchListeners) {
       listener(patches);
     }
   }
@@ -1763,9 +1763,34 @@ function findRemovedIndex(
   previousIds: readonly string[],
   nextIds: readonly string[],
 ): number | undefined {
-  const insertedIndex = findInsertedIndex(nextIds, previousIds);
+  if (previousIds.length !== nextIds.length + 1) {
+    return undefined;
+  }
 
-  return insertedIndex;
+  let nextIndex = 0;
+  let removedIndex: number | undefined;
+
+  for (
+    let previousIndex = 0;
+    previousIndex < previousIds.length;
+    previousIndex += 1
+  ) {
+    if (
+      nextIndex < nextIds.length &&
+      previousIds[previousIndex] === nextIds[nextIndex]
+    ) {
+      nextIndex += 1;
+      continue;
+    }
+
+    if (removedIndex !== undefined) {
+      return undefined;
+    }
+
+    removedIndex = previousIndex;
+  }
+
+  return removedIndex;
 }
 
 function findMovedIndex(

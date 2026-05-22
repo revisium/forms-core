@@ -59,6 +59,74 @@ describe('form patches', () => {
     form.dispose();
   });
 
+  it('emits nested object add and remove patches', () => {
+    const form = createForm({
+      defaultValues: {
+        profile: {
+          name: 'Ada',
+        } as {
+          name?: string;
+          nickname?: string;
+        },
+      },
+      fields: {},
+    });
+    const emitted = collectPatches(form);
+
+    form.reset({
+      profile: {
+        nickname: 'Countess',
+      },
+    });
+
+    expect(emitted.batches).toEqual([
+      [
+        {
+          type: 'remove',
+          path: 'profile.name',
+          previousValue: 'Ada',
+        },
+        {
+          type: 'set',
+          path: 'profile.nickname',
+          value: 'Countess',
+          previousValue: undefined,
+        },
+      ],
+    ]);
+
+    emitted.dispose();
+    form.dispose();
+  });
+
+  it('falls back to set patches for unconfigured array length changes', () => {
+    const form = createForm({
+      defaultValues: {
+        tags: ['alpha'],
+      },
+      fields: {
+        tags: field<string[]>(),
+      },
+    });
+    const emitted = collectPatches(form);
+
+    form.controls.tags.setValue(['alpha', 'beta']);
+
+    expect(emitted.batches).toEqual([
+      [
+        {
+          type: 'set',
+          path: 'tags',
+          value: ['alpha', 'beta'],
+          previousValue: ['alpha'],
+        },
+      ],
+    ]);
+
+    emitted.dispose();
+    form.dispose();
+  });
+
   it('emits stable array operation patches', () => {
     const form = createMembersForm();
     const emitted = collectPatches(form);
@@ -131,6 +199,39 @@ describe('form patches', () => {
           { id: '3', name: 'Cara' },
         ],
       },
+    ]);
+
+    emitted.dispose();
+    form.dispose();
+  });
+
+  it('falls back to set patches when array ids are no longer unique', () => {
+    const form = createMembersForm();
+    const emitted = collectPatches(form);
+
+    form.reset({
+      title: 'Team',
+      members: [
+        { id: '1', name: 'Ann' },
+        { id: '1', name: 'Annie' },
+      ],
+    });
+
+    expect(emitted.batches).toEqual([
+      [
+        {
+          type: 'set',
+          path: 'members',
+          value: [
+            { id: '1', name: 'Ann' },
+            { id: '1', name: 'Annie' },
+          ],
+          previousValue: [
+            { id: '1', name: 'Ann' },
+            { id: '2', name: 'Bob' },
+          ],
+        },
+      ],
     ]);
 
     emitted.dispose();
