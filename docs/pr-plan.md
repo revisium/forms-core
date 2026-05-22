@@ -1,7 +1,8 @@
 # forms-core PR Plan
 
-The repository should be built in small PRs. Each PR must leave the branch in a
-reviewable state and update [docs/steps.md](./steps.md).
+The repository was built in small PRs. Future maintenance PRs should keep the
+branch reviewable and update durable source-of-truth docs when behavior,
+release workflow, or review policy changes.
 
 ## PR 1 - Docs And Agent Contract
 
