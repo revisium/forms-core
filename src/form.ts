@@ -646,6 +646,8 @@ class MobxForm<
       return;
     }
 
+    assertUniqueArrayItemIds(fieldName, previousItems, getItemId);
+
     const previousErrors = Array.from(this.#serverErrors.entries());
     const errorsByItemId = new Map<string, Array<readonly [string, string]>>();
 
@@ -675,6 +677,7 @@ class MobxForm<
 
     const nextValue = getPathValue(this.#formApi.state.values, fieldName);
     const nextItems = Array.isArray(nextValue) ? (nextValue as TItem[]) : [];
+    assertUniqueArrayItemIds(fieldName, nextItems, getItemId);
 
     nextItems.forEach((item, index) => {
       const itemErrors = errorsByItemId.get(getItemId(item));
@@ -881,7 +884,10 @@ class MobxFormArray<TItem, TValues extends object>
   }
 
   get value(): readonly TItem[] {
-    return this.#stateBridge.value.value;
+    const value = this.#stateBridge.value.value;
+    assertUniqueArrayItemIds(this.#fieldName, value, this.#config.getItemId);
+
+    return value;
   }
 
   get items(): readonly FormArrayItem<TItem>[] {
@@ -918,6 +924,11 @@ class MobxFormArray<TItem, TValues extends object>
 
   push(value: TItem): void {
     const previousItems = [...this.value];
+    assertUniqueArrayItemIds(
+      this.#fieldName,
+      [...previousItems, value],
+      this.#config.getItemId,
+    );
     this.#arrayApi.pushValue(value);
     this.#remapServerErrors(
       this.#fieldName,
@@ -928,6 +939,13 @@ class MobxFormArray<TItem, TValues extends object>
 
   insert(index: number, value: TItem): void {
     const previousItems = [...this.value];
+    const nextItems = [...previousItems];
+    nextItems.splice(index, 0, value);
+    assertUniqueArrayItemIds(
+      this.#fieldName,
+      nextItems,
+      this.#config.getItemId,
+    );
     this.#arrayApi.insertValue(index, value);
     this.#remapServerErrors(
       this.#fieldName,
@@ -1348,6 +1366,26 @@ function areStringArraysEqual(
 
 function createArrayItemCacheKey(id: string, index: number): string {
   return `${id}:${index}`;
+}
+
+function assertUniqueArrayItemIds<TItem>(
+  fieldName: string,
+  items: readonly TItem[],
+  getItemId: (item: TItem) => string,
+): void {
+  const seenIds = new Set<string>();
+
+  for (const item of items) {
+    const id = getItemId(item);
+
+    if (seenIds.has(id)) {
+      throw new Error(
+        `Array field "${fieldName}" has duplicate item id "${id}". getItemId must return a unique stable id for each item.`,
+      );
+    }
+
+    seenIds.add(id);
+  }
 }
 
 function isArrayIndexInBounds(

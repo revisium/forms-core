@@ -173,7 +173,8 @@ Arrays support nested paths and stable public identity.
 
 Rules:
 
-- `getItemId` is required.
+- `getItemId` is required and must return a unique stable id for every item in
+  the array.
 - Public `items` expose stable ids, current indexes, and item controls/value.
 - Public identity never relies on array index.
 - Internally, TanStack index paths may be used.

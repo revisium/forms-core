@@ -143,6 +143,40 @@ describe('nested paths and arrays', () => {
     form.dispose();
   });
 
+  it('rejects duplicate array item ids because public identity must be stable', () => {
+    const form = createForm({
+      defaultValues: {
+        members: [
+          { id: 'same', name: 'Ann' },
+          { id: 'same', name: 'Bob' },
+        ],
+      },
+      fields: {},
+      arrays: {
+        members: arrayField<MemberValues['members'][number]>({
+          getItemId: (item) => item.id,
+        }),
+      },
+    });
+
+    expect(() => form.arrays.members.items).toThrow(
+      'Array field "members" has duplicate item id "same".',
+    );
+
+    form.dispose();
+  });
+
+  it('rejects new array items with duplicate stable ids', () => {
+    const form = createMembersForm();
+
+    expect(() => {
+      form.arrays.members.push({ id: '2', name: 'Bobby' });
+    }).toThrow('Array field "members" has duplicate item id "2".');
+    expect(readMemberIds(form)).toEqual(['1', '2']);
+
+    form.dispose();
+  });
+
   it('supports nested array paths', () => {
     const form = createForm({
       defaultValues: {
