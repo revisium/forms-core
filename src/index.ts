@@ -5,9 +5,17 @@ export type {
   FieldConfigs,
   FormControl,
   FormControls,
+  FormAsyncValidator,
+  FormAsyncValidatorContext,
+  FormValidationResult,
+  FormValidator,
+  FormValidatorContext,
+  FormValidators,
   FormsCoreForm,
 } from './form.js';
 export type {
+  FieldAsyncValidator,
+  FieldAsyncValidatorContext,
   FieldConfig,
   FieldValidationResult,
   FieldValidator,

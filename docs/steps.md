@@ -102,15 +102,15 @@ Exit criteria:
 
 ## PR 5 - Validation And Server Errors
 
-- [ ] Support sync field validators.
-- [ ] Support async field validators.
-- [ ] Support async debounce.
-- [ ] Support linked/dependent field validation where TanStack supports it.
-- [ ] Support form-level validation.
-- [ ] Support submit validation.
-- [ ] Implement `applyServerErrors`.
-- [ ] Clear server errors on relevant value changes and reset.
-- [ ] Add tests for validation, debounce, linked validation, form validation,
+- [x] Support sync field validators.
+- [x] Support async field validators.
+- [x] Support async debounce.
+- [x] Support linked/dependent field validation where TanStack supports it.
+- [x] Support form-level validation.
+- [x] Support submit validation.
+- [x] Implement `applyServerErrors`.
+- [x] Clear server errors on relevant value changes and reset.
+- [x] Add tests for validation, debounce, linked validation, form validation,
       submit validation, server error visibility, and server error clearing.
 
 Exit criteria:

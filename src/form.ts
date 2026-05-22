@@ -3,12 +3,15 @@ import { FieldApi, FormApi } from '@tanstack/form-core';
 import type {
   DeepKeys,
   DeepValue,
+  FieldAsyncValidateOrFn,
   FieldApiOptions,
   FieldValidateOrFn,
+  FormAsyncValidateOrFn,
+  FormValidateOrFn,
   ValidationCause,
 } from '@tanstack/form-core';
 
-import type { FieldConfig, FieldValidator, FieldValidators } from './field.js';
+import type { FieldConfig, FieldValidators } from './field.js';
 import {
   normalizeErrors,
   normalizeFirstError,
@@ -23,7 +26,10 @@ import {
 type StringKeyOf<TValues extends object> = Extract<keyof TValues, string>;
 
 export type FieldConfigs<TValues extends object> = Partial<{
-  readonly [TName in StringKeyOf<TValues>]: FieldConfig<TValues[TName]>;
+  readonly [TName in StringKeyOf<TValues>]: FieldConfig<
+    TValues[TName],
+    TValues
+  >;
 }>;
 
 type ControlName<
@@ -46,6 +52,45 @@ export type CreateFormOptions<
 > = {
   readonly defaultValues: TValues;
   readonly fields: TFields;
+  readonly validators?: FormValidators<TValues>;
+};
+
+export type FormValidationResult<TValues extends object> =
+  | string
+  | {
+      readonly form?: string;
+      readonly fields?: Partial<Record<StringKeyOf<TValues>, string>>;
+    }
+  | null
+  | undefined
+  | void;
+
+export type FormValidatorContext<TValues extends object> = {
+  readonly value: TValues;
+};
+
+export type FormAsyncValidatorContext<TValues extends object> =
+  FormValidatorContext<TValues> & {
+    readonly signal: AbortSignal;
+  };
+
+export type FormValidator<TValues extends object> = (
+  context: FormValidatorContext<TValues>,
+) => FormValidationResult<TValues>;
+
+export type FormAsyncValidator<TValues extends object> = (
+  context: FormAsyncValidatorContext<TValues>,
+) => FormValidationResult<TValues> | Promise<FormValidationResult<TValues>>;
+
+export type FormValidators<TValues extends object> = {
+  readonly onChange?: FormValidator<TValues>;
+  readonly onChangeAsync?: FormAsyncValidator<TValues>;
+  readonly onChangeAsyncDebounceMs?: number;
+  readonly onBlur?: FormValidator<TValues>;
+  readonly onBlurAsync?: FormAsyncValidator<TValues>;
+  readonly onBlurAsyncDebounceMs?: number;
+  readonly onSubmit?: FormValidator<TValues>;
+  readonly onSubmitAsync?: FormAsyncValidator<TValues>;
 };
 
 export type FormControl<TValue> = {
@@ -75,6 +120,7 @@ export type FormsCoreForm<
   reset(values?: TValues): void;
   submit(): Promise<void>;
   validate(): Promise<readonly string[]>;
+  applyServerErrors(errors: Record<string, string>): void;
   dispose(): void;
 };
 
@@ -99,15 +145,31 @@ type TanStackFormApi<TValues extends object> = {
   validateAllFields: (cause: ValidationCause) => Promise<unknown[]>;
 };
 
+type TanStackServerErrorApi = {
+  setErrorMap: (errorMap: {
+    readonly onServer: {
+      readonly fields: Record<string, string>;
+    };
+  }) => void;
+};
+
+type RawFormValidate<TValues extends object> =
+  | FormValidateOrFn<TValues>
+  | undefined;
+
+type RawFormAsyncValidate<TValues extends object> =
+  | FormAsyncValidateOrFn<TValues>
+  | undefined;
+
 type RawTanStackFormApi<TValues extends object> = FormApi<
   TValues,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
+  RawFormValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
   undefined,
   undefined,
   undefined,
@@ -116,6 +178,9 @@ type RawTanStackFormApi<TValues extends object> = FormApi<
 
 type TanStackFieldMeta = {
   readonly errors: readonly unknown[];
+  readonly errorMap: {
+    readonly onServer?: unknown;
+  };
   readonly isDirty: boolean;
   readonly isTouched: boolean;
   readonly isValidating: boolean;
@@ -133,12 +198,47 @@ type TanStackFieldApi<TValue> = {
   handleBlur: () => void;
 };
 
-type AdaptedFieldValidators<TValue> = Partial<
-  Record<
-    keyof FieldValidators<TValue>,
-    (context: { readonly value: TValue }) => unknown
-  >
->;
+type AdaptedFieldValidators<TValue, TValues extends object> = {
+  onChange?: (context: { readonly value: TValue }) => unknown;
+  onChangeAsync?: (context: {
+    readonly value: TValue;
+    readonly signal: AbortSignal;
+  }) => unknown;
+  onChangeAsyncDebounceMs?: number;
+  onChangeListenTo?: readonly StringKeyOf<TValues>[];
+  onBlur?: (context: { readonly value: TValue }) => unknown;
+  onBlurAsync?: (context: {
+    readonly value: TValue;
+    readonly signal: AbortSignal;
+  }) => unknown;
+  onBlurAsyncDebounceMs?: number;
+  onBlurListenTo?: readonly StringKeyOf<TValues>[];
+  onSubmit?: (context: { readonly value: TValue }) => unknown;
+  onSubmitAsync?: (context: {
+    readonly value: TValue;
+    readonly signal: AbortSignal;
+  }) => unknown;
+};
+
+type AdaptedFormValidators<TValues extends object> = {
+  onChange?: (context: { readonly value: TValues }) => unknown;
+  onChangeAsync?: (context: {
+    readonly value: TValues;
+    readonly signal: AbortSignal;
+  }) => unknown;
+  onChangeAsyncDebounceMs?: number;
+  onBlur?: (context: { readonly value: TValues }) => unknown;
+  onBlurAsync?: (context: {
+    readonly value: TValues;
+    readonly signal: AbortSignal;
+  }) => unknown;
+  onBlurAsyncDebounceMs?: number;
+  onSubmit?: (context: { readonly value: TValues }) => unknown;
+  onSubmitAsync?: (context: {
+    readonly value: TValues;
+    readonly signal: AbortSignal;
+  }) => unknown;
+};
 
 type AnyRawFieldName<TValues extends object> = DeepKeys<TValues>;
 
@@ -155,26 +255,34 @@ type RawFieldValidate<TValues extends object> =
     >
   | undefined;
 
+type RawFieldAsyncValidate<TValues extends object> =
+  | FieldAsyncValidateOrFn<
+      TValues,
+      AnyRawFieldName<TValues>,
+      AnyRawFieldValue<TValues>
+    >
+  | undefined;
+
 type RawFieldApiOptions<TValues extends object> = FieldApiOptions<
   TValues,
   AnyRawFieldName<TValues>,
   AnyRawFieldValue<TValues>,
   undefined,
   RawFieldValidate<TValues>,
-  undefined,
+  RawFieldAsyncValidate<TValues>,
   RawFieldValidate<TValues>,
-  undefined,
+  RawFieldAsyncValidate<TValues>,
   RawFieldValidate<TValues>,
+  RawFieldAsyncValidate<TValues>,
   undefined,
   undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
-  undefined,
+  RawFormValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
+  RawFormValidate<TValues>,
+  RawFormAsyncValidate<TValues>,
   undefined,
   undefined,
   undefined,
@@ -193,6 +301,7 @@ type FormSnapshot = {
 type ControlSnapshot<TValue> = {
   readonly value: TValue;
   readonly error: PublicFieldError;
+  readonly hasServerError: boolean;
   readonly isDirty: boolean;
   readonly isTouched: boolean;
   readonly isValidating: boolean;
@@ -219,31 +328,39 @@ class MobxForm<
 
   readonly #controls: readonly InternalControl[];
 
+  readonly #controlByName: ReadonlyMap<string, InternalControl>;
+
   readonly #formApi: TanStackFormApi<TValues>;
+
+  readonly #rawFormApi: RawTanStackFormApi<TValues>;
 
   readonly #formCleanup: () => void;
 
   readonly #stateBridge: MobxSelectorBridge<FormSnapshot>;
+
+  readonly #serverErrors = new Map<string, string>();
 
   #disposed = false;
 
   constructor(options: CreateFormOptions<TValues, TFields>) {
     const rawFormApi = new FormApi<
       TValues,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+      RawFormValidate<TValues>,
+      RawFormValidate<TValues>,
+      RawFormAsyncValidate<TValues>,
+      RawFormValidate<TValues>,
+      RawFormAsyncValidate<TValues>,
+      RawFormValidate<TValues>,
+      RawFormAsyncValidate<TValues>,
       undefined,
       undefined,
       undefined,
       never
     >({
       defaultValues: options.defaultValues,
+      validators: adaptFormValidators(options.validators),
     });
+    this.#rawFormApi = rawFormApi;
     this.#formApi = rawFormApi;
     this.#formCleanup = this.#formApi.mount();
     this.#stateBridge = createMobxSelectorBridge(
@@ -254,6 +371,7 @@ class MobxForm<
 
     const controls: Partial<Record<string, FormControl<unknown>>> = {};
     const internalControls: InternalControl[] = [];
+    const controlByName = new Map<string, InternalControl>();
 
     for (const name of fieldConfigKeys(options.fields)) {
       const config = options.fields[name];
@@ -265,6 +383,9 @@ class MobxForm<
       const control = new MobxFormControl<TValues[typeof name], TValues>({
         fieldName: name,
         formApi: this.#formApi,
+        clearServerError: (fieldName) => {
+          this.clearServerError(fieldName);
+        },
         getSubmissionAttempts: () => this.#stateBridge.value.submissionAttempts,
         rawFormApi,
         config,
@@ -272,10 +393,12 @@ class MobxForm<
 
       controls[name] = control;
       internalControls.push(control);
+      controlByName.set(name, control);
     }
 
     this.controls = controls as FormControls<TValues, TFields>;
     this.#controls = internalControls;
+    this.#controlByName = controlByName;
   }
 
   get isValid(): boolean {
@@ -303,6 +426,8 @@ class MobxForm<
   }
 
   reset(values?: TValues): void {
+    this.clearServerErrors();
+
     if (values === undefined) {
       this.#formApi.reset();
       return;
@@ -312,7 +437,11 @@ class MobxForm<
   }
 
   async submit(): Promise<void> {
-    await this.#formApi.handleSubmit();
+    try {
+      await this.#formApi.handleSubmit();
+    } finally {
+      this.applyServerErrorMap();
+    }
   }
 
   async validate(): Promise<readonly string[]> {
@@ -320,8 +449,21 @@ class MobxForm<
       this.#formApi.validateAllFields('submit'),
       Promise.resolve(this.#formApi.validate('submit')),
     ]);
+    this.applyServerErrorMap();
 
     return this.errors;
+  }
+
+  applyServerErrors(errors: Record<string, string>): void {
+    this.#serverErrors.clear();
+
+    for (const [fieldName, error] of Object.entries(errors)) {
+      if (this.#controlByName.has(fieldName)) {
+        this.#serverErrors.set(fieldName, error);
+      }
+    }
+
+    this.applyServerErrorMap();
   }
 
   dispose(): void {
@@ -338,6 +480,25 @@ class MobxForm<
     this.#stateBridge.dispose();
     this.#formCleanup();
   }
+
+  private clearServerErrors(): void {
+    this.#serverErrors.clear();
+    this.applyServerErrorMap();
+  }
+
+  private clearServerError(fieldName: string): void {
+    if (this.#serverErrors.delete(fieldName)) {
+      this.applyServerErrorMap();
+    }
+  }
+
+  private applyServerErrorMap(): void {
+    const fields = Object.fromEntries(this.#serverErrors);
+
+    (this.#rawFormApi as unknown as TanStackServerErrorApi).setErrorMap({
+      onServer: { fields },
+    });
+  }
 }
 
 class MobxFormControl<TValue, TValues extends object>
@@ -346,6 +507,8 @@ class MobxFormControl<TValue, TValues extends object>
   readonly #fieldApi: TanStackFieldApi<TValue>;
 
   readonly #fieldName: string;
+
+  readonly #clearServerError: (fieldName: string) => void;
 
   readonly #fieldCleanup: () => void;
 
@@ -360,18 +523,23 @@ class MobxFormControl<TValue, TValues extends object>
   constructor(options: {
     readonly fieldName: string;
     readonly formApi: TanStackFormApi<TValues>;
+    readonly clearServerError: (fieldName: string) => void;
     readonly getSubmissionAttempts: () => number;
     readonly rawFormApi: RawTanStackFormApi<TValues>;
-    readonly config: FieldConfig<TValue>;
+    readonly config: FieldConfig<TValue, TValues>;
   }) {
     this.#fieldName = options.fieldName;
     this.#formApi = options.formApi;
+    this.#clearServerError = options.clearServerError;
     this.#getSubmissionAttempts = options.getSubmissionAttempts;
 
     const fieldApiOptions = {
       form: options.rawFormApi,
       name: options.fieldName,
-      validators: adaptFieldValidators(options.config.validators),
+      validators: adaptFieldValidators(
+        options.config.validators,
+        options.formApi,
+      ),
     } as unknown as RawFieldApiOptions<TValues>;
 
     const fieldApi = new FieldApi(fieldApiOptions);
@@ -404,7 +572,9 @@ class MobxFormControl<TValue, TValues extends object>
       return undefined;
     }
 
-    return state.isTouched || this.#getSubmissionAttempts() > 0
+    return state.hasServerError ||
+      state.isTouched ||
+      this.#getSubmissionAttempts() > 0
       ? state.error
       : undefined;
   }
@@ -422,6 +592,10 @@ class MobxFormControl<TValue, TValues extends object>
   }
 
   setValue(value: TValue): void {
+    if (!Object.is(this.value, value)) {
+      this.#clearServerError(this.#fieldName);
+    }
+
     this.#fieldApi.setValue(() => value);
   }
 
@@ -430,6 +604,7 @@ class MobxFormControl<TValue, TValues extends object>
   }
 
   reset(): void {
+    this.#clearServerError(this.#fieldName);
     this.#formApi.resetField(this.#fieldName);
   }
 
@@ -451,32 +626,166 @@ function fieldConfigKeys<
   return Object.keys(value) as Array<ControlName<TValues, TFields>>;
 }
 
-function adaptFieldValidators<TValue>(
-  validators: FieldValidators<TValue> | undefined,
-): AdaptedFieldValidators<TValue> | undefined {
+function adaptFieldValidators<TValue, TValues extends object>(
+  validators: FieldValidators<TValue, TValues> | undefined,
+  formApi: TanStackFormApi<TValues>,
+): AdaptedFieldValidators<TValue, TValues> | undefined {
   if (validators === undefined) {
     return undefined;
   }
 
-  const adapted: AdaptedFieldValidators<TValue> = {};
+  const adapted: AdaptedFieldValidators<TValue, TValues> = {};
 
-  addFieldValidator(adapted, 'onChange', validators.onChange);
-  addFieldValidator(adapted, 'onBlur', validators.onBlur);
-  addFieldValidator(adapted, 'onSubmit', validators.onSubmit);
+  if (validators.onChange !== undefined) {
+    adapted.onChange = ({ value }) =>
+      validators.onChange?.({ value, values: formApi.state.values });
+  }
+
+  if (validators.onChangeAsync !== undefined) {
+    adapted.onChangeAsync = ({ value, signal }) =>
+      validators.onChangeAsync?.({
+        value,
+        values: formApi.state.values,
+        signal,
+      });
+  }
+
+  if (validators.onChangeAsyncDebounceMs !== undefined) {
+    adapted.onChangeAsyncDebounceMs = validators.onChangeAsyncDebounceMs;
+  }
+
+  if (validators.onChangeListenTo !== undefined) {
+    adapted.onChangeListenTo = [...validators.onChangeListenTo];
+  }
+
+  if (validators.onBlur !== undefined) {
+    adapted.onBlur = ({ value }) =>
+      validators.onBlur?.({ value, values: formApi.state.values });
+  }
+
+  if (validators.onBlurAsync !== undefined) {
+    adapted.onBlurAsync = ({ value, signal }) =>
+      validators.onBlurAsync?.({
+        value,
+        values: formApi.state.values,
+        signal,
+      });
+  }
+
+  if (validators.onBlurAsyncDebounceMs !== undefined) {
+    adapted.onBlurAsyncDebounceMs = validators.onBlurAsyncDebounceMs;
+  }
+
+  if (validators.onBlurListenTo !== undefined) {
+    adapted.onBlurListenTo = [...validators.onBlurListenTo];
+  }
+
+  if (validators.onSubmit !== undefined) {
+    adapted.onSubmit = ({ value }) =>
+      validators.onSubmit?.({ value, values: formApi.state.values });
+  }
+
+  if (validators.onSubmitAsync !== undefined) {
+    adapted.onSubmitAsync = ({ value, signal }) =>
+      validators.onSubmitAsync?.({
+        value,
+        values: formApi.state.values,
+        signal,
+      });
+  }
 
   return adapted;
 }
 
-function addFieldValidator<TValue>(
-  adapted: Record<string, (context: { readonly value: TValue }) => unknown>,
-  key: keyof FieldValidators<TValue>,
-  validator: FieldValidator<TValue> | undefined,
-): void {
-  if (validator === undefined) {
-    return;
+function adaptFormValidators<TValues extends object>(
+  validators: FormValidators<TValues> | undefined,
+): AdaptedFormValidators<TValues> | undefined {
+  if (validators === undefined) {
+    return undefined;
   }
 
-  adapted[key] = ({ value }) => validator({ value });
+  const adapted: AdaptedFormValidators<TValues> = {};
+
+  if (validators.onChange !== undefined) {
+    adapted.onChange = ({ value }) =>
+      normalizeFormValidationResult(validators.onChange?.({ value }));
+  }
+
+  if (validators.onChangeAsync !== undefined) {
+    adapted.onChangeAsync = async ({ value, signal }) =>
+      normalizeFormValidationResult(
+        await validators.onChangeAsync?.({ value, signal }),
+      );
+  }
+
+  if (validators.onChangeAsyncDebounceMs !== undefined) {
+    adapted.onChangeAsyncDebounceMs = validators.onChangeAsyncDebounceMs;
+  }
+
+  if (validators.onBlur !== undefined) {
+    adapted.onBlur = ({ value }) =>
+      normalizeFormValidationResult(validators.onBlur?.({ value }));
+  }
+
+  if (validators.onBlurAsync !== undefined) {
+    adapted.onBlurAsync = async ({ value, signal }) =>
+      normalizeFormValidationResult(
+        await validators.onBlurAsync?.({ value, signal }),
+      );
+  }
+
+  if (validators.onBlurAsyncDebounceMs !== undefined) {
+    adapted.onBlurAsyncDebounceMs = validators.onBlurAsyncDebounceMs;
+  }
+
+  if (validators.onSubmit !== undefined) {
+    adapted.onSubmit = ({ value }) =>
+      normalizeFormValidationResult(validators.onSubmit?.({ value }));
+  }
+
+  if (validators.onSubmitAsync !== undefined) {
+    adapted.onSubmitAsync = async ({ value, signal }) =>
+      normalizeFormValidationResult(
+        await validators.onSubmitAsync?.({ value, signal }),
+      );
+  }
+
+  return adapted;
+}
+
+function normalizeFormValidationResult<TValues extends object>(
+  result: FormValidationResult<TValues>,
+):
+  | string
+  | {
+      readonly form?: string;
+      readonly fields: Partial<Record<StringKeyOf<TValues>, string>>;
+    }
+  | undefined {
+  if (result === null || result === undefined) {
+    return undefined;
+  }
+
+  if (typeof result === 'object') {
+    const fields = Object.fromEntries(
+      Object.entries(result.fields ?? {}).filter(
+        ([, error]) => error !== undefined && error !== null && error !== '',
+      ),
+    ) as Partial<Record<StringKeyOf<TValues>, string>>;
+    const form =
+      result.form === undefined || result.form === '' ? undefined : result.form;
+
+    if (form === undefined && Object.keys(fields).length === 0) {
+      return undefined;
+    }
+
+    return {
+      form,
+      fields,
+    };
+  }
+
+  return result;
 }
 
 function selectFormSnapshot<TValues extends object>(
@@ -495,11 +804,13 @@ function selectFormSnapshot<TValues extends object>(
 function selectControlSnapshot<TValue>(
   state: TanStackFieldState<TValue>,
 ): ControlSnapshot<TValue> {
-  const error = normalizeFirstError(state.meta.errors);
+  const serverError = normalizeFirstError(state.meta.errorMap.onServer);
+  const error = serverError ?? normalizeFirstError(state.meta.errors);
 
   return {
     value: state.value,
     error,
+    hasServerError: serverError !== undefined,
     isDirty: state.meta.isDirty,
     isTouched: state.meta.isTouched,
     isValidating: state.meta.isValidating,
@@ -527,6 +838,7 @@ function areControlSnapshotsEqual<TValue>(
   return (
     Object.is(previous.value, next.value) &&
     previous.error === next.error &&
+    previous.hasServerError === next.hasServerError &&
     previous.isDirty === next.isDirty &&
     previous.isTouched === next.isTouched &&
     previous.isValidating === next.isValidating

@@ -9,10 +9,11 @@ lifecycle, and consumers should observe public getters with MobX `computed`,
 
 ## Current Status
 
-This repository is in the package-scaffold phase. The agent contract, review
-contract, architecture notes, implementation steps, release plan, local
-toolchain, CI, and Sonar configuration are being established before runtime form
-behavior is added.
+This repository is in active implementation. The package scaffold, local
+toolchain, CI/Sonar wiring, private MobX selector bridge, scalar form/control
+wrappers, validation adapter, and explicit server-error lifecycle are in place.
+Nested paths, arrays, patch emission, and final README/API polish are tracked in
+the implementation steps.
 
 ## Start Here
 
