@@ -278,7 +278,8 @@ Known limitations and deliberate constraints are tracked in
 
 ## Development
 
-Use Node.js 20.16 or newer. CI currently runs on Node.js 24.11.1.
+Use Node.js 20.16 or newer. CI verifies the declared Node floor on 20.16.0 and
+runs the primary Sonar-enabled job on 24.11.1.
 
 ```bash
 npm ci
