@@ -81,18 +81,18 @@ Exit criteria:
 
 ## PR 4 - Form And Control Wrappers
 
-- [ ] Implement `createForm`.
-- [ ] Implement `field`.
-- [ ] Own `FormApi` and mount/dispose lifecycle.
-- [ ] Expose form getters: `isValid`, `isDirty`, `isTouched`, `isSubmitting`,
+- [x] Implement `createForm`.
+- [x] Implement `field`.
+- [x] Own `FormApi` and mount/dispose lifecycle.
+- [x] Expose form getters: `isValid`, `isDirty`, `isTouched`, `isSubmitting`,
       `errors`.
-- [ ] Expose form commands: `getRawValue`, `reset`, `submit`, `validate`,
+- [x] Expose form commands: `getRawValue`, `reset`, `submit`, `validate`,
       `dispose`.
-- [ ] Expose control getters: `value`, `displayValue`, `error`, `visibleError`,
+- [x] Expose control getters: `value`, `displayValue`, `error`, `visibleError`,
       `isDirty`, `isTouched`, `isValidating`.
-- [ ] Expose control commands: `setValue`, `blur`, `reset`.
-- [ ] Normalize TanStack error maps.
-- [ ] Add tests for scalar value reactivity, validity reactivity, reset, dirty,
+- [x] Expose control commands: `setValue`, `blur`, `reset`.
+- [x] Normalize TanStack error maps.
+- [x] Add tests for scalar value reactivity, validity reactivity, reset, dirty,
       touched, and no manual subscribe usage.
 
 Exit criteria:
