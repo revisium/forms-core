@@ -8,5 +8,5 @@
   },
   "gitignore": ".gitignore",
   "globs": ["**/*.{md,mdc}"],
-  "ignores": ["node_modules/**", "dist/**", "coverage/**"],
+  "ignores": ["node_modules/**", "dist/**", "coverage/**", ".revisium-actions/**"],
 }
