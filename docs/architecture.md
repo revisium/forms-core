@@ -92,7 +92,7 @@ const form = createForm({
     password: field<string>(),
   },
   arrays: {
-    members: arrayField({
+    members: arrayField<{ id: string; name: string }>({
       getItemId: (item) => item.id,
     }),
   },
@@ -324,13 +324,18 @@ Patches are for autosave, not for replacing TanStack state.
 
 Public API should preserve typed values where practical:
 
-- `createForm<TValues>()` infers `TValues` from `defaultValues`;
-- `field<TValue>()` keeps control value type;
-- `arrayField<TItem>()` keeps item type and id extractor type;
+- `createForm(...)` infers `TValues` from `defaultValues`;
+- configured field and array names are checked against TanStack deep paths;
+- `field<TValue, TValues>()` types validator value/context when callbacks need
+  the full form value;
+- `arrayField<TItem>()` types the id extractor and public item operations;
+- created controls, arrays, `reset(values)`, and `applyServerErrors(paths)` stay
+  typed from `defaultValues` and configured paths;
 - deep path typing should not leak complex implementation generics.
 
-If deep path typing becomes too complex, isolate casts in internal helpers and
-keep the public API readable.
+Type tests live in `test/types/*.test-d.ts` and are compiled by
+`npm run tsc`. If deeper contextual typing becomes too complex, isolate casts
+in internal helpers and keep the public API readable.
 
 ## Disposal
 
