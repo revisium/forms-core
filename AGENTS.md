@@ -9,8 +9,9 @@ Revisium `AGENTS.md` also applies.
   source-of-truth doc: [docs/architecture.md](./docs/architecture.md),
   [docs/reactivity-matrix.md](./docs/reactivity-matrix.md),
   [docs/release-train.md](./docs/release-train.md),
-  [docs/readme-guidelines.md](./docs/readme-guidelines.md),
-  [docs/quality-gates.md](./docs/quality-gates.md), or [REVIEW.md](./REVIEW.md).
+  [docs/limitations.md](./docs/limitations.md),
+  [docs/quality-gates.md](./docs/quality-gates.md), [README.md](./README.md),
+  or [REVIEW.md](./REVIEW.md).
 - **Headless package only.** Do not import React, Chakra, React Router,
   `mobx-react-lite`, or any UI library in package source.
 - **Do not build a custom form engine.** The core engine is
@@ -66,8 +67,8 @@ count; PR checks enforce the `0` unresolved-valid-issues rule. If an issue is a
 false positive, document the evidence and use the narrowest allowed suppression
 only when the repo permits it.
 
-## Handoff
+## Reusable Agent Method
 
-Start from [docs/handoff/README.md](./docs/handoff/README.md). It links the
-review contract, architecture, quality gates, release docs, and reusable
-bootstrap pattern for other libraries.
+Reusable bootstrap prompts, generic quality practices, and cross-project agent
+workflows belong in `anton62k/agents`. Keep this repository limited to the
+`forms-core` package contract, implementation notes, and release workflow.

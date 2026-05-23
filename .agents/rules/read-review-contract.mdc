@@ -7,5 +7,5 @@ alwaysApply: true
 
 Start review and implementation work from `REVIEW.md`, then follow
 `docs/architecture.md`, `docs/reactivity-matrix.md`, `docs/quality-gates.md`,
-`docs/readme-guidelines.md`, `docs/release-train.md`, and
+`README.md`, `docs/release-train.md`, and
 `docs/review/forms-core-checklist.md`.
