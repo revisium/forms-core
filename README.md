@@ -115,17 +115,49 @@ form.dispose();
 Exports include `createForm`, `field`, `arrayField`, and public types for form
 options, controls, arrays, validators, patches, and listeners.
 
+## TypeScript Contract
+
+`createForm(...)` infers the form value shape from `defaultValues`. Created
+controls, arrays, `reset(values)`, and `applyServerErrors(paths)` are typed
+from that value shape and the configured field/array paths.
+
+Use explicit helper generics when a callback needs contextual types inside the
+configuration object:
+
+```ts
+type Values = { email: string; confirmEmail: string };
+
+field<string, Values>({
+  validators: {
+    onChange: ({ value, values }) =>
+      value === values.confirmEmail ? undefined : 'Emails must match',
+    onChangeListenTo: ['confirmEmail'],
+  },
+});
+
+arrayField<{ id: string; name: string }>({
+  getItemId: (item) => item.id,
+});
+```
+
 ## Validation
 
 Field validators support sync, async, debounce, submit, blur, and linked-field
 validation where TanStack Form Core supports the underlying behavior.
 
 ```ts
+type EmailFormValues = {
+  email: string;
+  confirmEmail: string;
+};
+
+const defaultValues: EmailFormValues = {
+  email: '',
+  confirmEmail: '',
+};
+
 const form = createForm({
-  defaultValues: {
-    email: '',
-    confirmEmail: '',
-  },
+  defaultValues,
   fields: {
     email: field<string>({
       validators: {
@@ -137,7 +169,7 @@ const form = createForm({
         onChangeAsyncDebounceMs: 300,
       },
     }),
-    confirmEmail: field<string>({
+    confirmEmail: field<string, EmailFormValues>({
       validators: {
         onChangeListenTo: ['email'],
         onChange: ({ value, values }) =>

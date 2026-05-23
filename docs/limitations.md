@@ -13,8 +13,13 @@ implementation PR confirms or changes a limitation.
 
 ## Initial Limitations To Validate During Implementation
 
-- Deep path typing may be limited. Prefer a clean public API with internal casts
-  over leaking heavy TanStack generics.
+- Post-creation form values, controls, reset values, server-error paths, and array
+  item operations are type-checked from `defaultValues` and configured field/array
+  paths. Validator callback context and `arrayField({ getItemId })` item context
+  currently need explicit helper generics, for example `field<string, Values>()`
+  and `arrayField<Values['members'][number]>()`. This keeps TanStack's heavy
+  generics out of the public form object while leaving room for a future
+  contextual builder API.
 - Array server-error reindexing is implemented for `arrayField` wrappers with
   stable ids. Future low-level array path APIs without `getItemId` would need a
   separate path-index policy.
