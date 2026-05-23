@@ -24,7 +24,7 @@ description when requested, or PR comment.
 - `REVIEW.md`.
 - `docs/architecture.md`.
 - `docs/quality-gates.md`.
-- `docs/readme-guidelines.md` when README changes.
+- `README.md` when public usage examples or package claims change.
 - `docs/review/forms-core-checklist.md`.
 - `docs/release-train.md` when release or publish behavior changes.
 

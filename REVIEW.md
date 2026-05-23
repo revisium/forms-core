@@ -16,7 +16,7 @@ Before reviewing a PR, read:
 2. [docs/review/forms-core-checklist.md](./docs/review/forms-core-checklist.md)
 3. [docs/reactivity-matrix.md](./docs/reactivity-matrix.md)
 4. [docs/quality-gates.md](./docs/quality-gates.md)
-5. [docs/readme-guidelines.md](./docs/readme-guidelines.md) for README changes
+5. [README.md](./README.md) for public package usage changes
 6. [docs/release-train.md](./docs/release-train.md) for publish or version work
 
 ## Source Of Truth

@@ -74,6 +74,5 @@ sections that match their scope.
 
 ## README
 
-- [ ] README follows `docs/readme-guidelines.md` for release-ready changes.
-- [ ] README examples match tested public behavior.
+- [ ] README examples and package claims match tested public behavior.
 - [ ] README badges only claim checks that exist.
