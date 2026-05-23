@@ -57,6 +57,11 @@ type ArrayItemValue<TValue> =
       ? TItem
       : never;
 
+type NoExtraKeys<TValue, TAllowedKey extends PropertyKey> = Record<
+  Exclude<keyof TValue, TAllowedKey>,
+  never
+>;
+
 export type FieldConfigs<TValues extends object> = Partial<{
   readonly [TName in FieldPath<TValues>]: FieldConfig<
     FieldPathValue<TValues, TName>,
@@ -104,8 +109,8 @@ export type CreateFormOptions<
   TArrays extends ArrayFieldConfigs<TValues> = Record<never, never>,
 > = {
   readonly defaultValues: TValues;
-  readonly fields: TFields;
-  readonly arrays?: TArrays;
+  readonly fields: TFields & NoExtraKeys<TFields, FieldPath<TValues>>;
+  readonly arrays?: TArrays & NoExtraKeys<TArrays, ArrayPath<TValues>>;
   readonly validators?: FormValidators<TValues>;
 };
 
@@ -563,7 +568,7 @@ class MobxForm<
         continue;
       }
 
-      this.#arrayConfigs.set(name, config as ArrayFieldConfig<unknown>);
+      this.#arrayConfigs.set(name, config);
 
       const formArray = new MobxFormArray<
         ArrayItemValue<ArrayPathValue<TValues, typeof name>>,
